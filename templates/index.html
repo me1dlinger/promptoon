@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>绘画提示词生成器</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #f5f5f7;
+      color: #1d1d1f;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+      width: 100%;
+      flex: 1;
+    }
+
+    header {
+      text-align: center;
+      padding: 40px 20px;
+      background-color: #fff;
+      border-bottom: 1px solid #e5e5e7;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: #1d1d1f;
+    }
+
+    .subtitle {
+      font-size: 1rem;
+      color: #6e6e73;
+    }
+
+    .main-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+    }
+
+    .main-layout.has-result {
+      flex-direction: row;
+    }
+
+    .upload-section {
+      background-color: #fff;
+      border-radius: 16px;
+      padding: 40px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      width: 100%;
+    }
+
+    .main-layout.has-result .upload-section {
+      width: 40%;
+      max-width: 500px;
+    }
+
+    .upload-area {
+      border: 2px dashed #d1d1d6;
+      border-radius: 12px;
+      padding: 60px 20px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      background-color: #f9f9fb;
+      min-height: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .upload-area.has-image {
+      padding: 0;
+      background-color: #fff;
+      border: 2px solid #007aff;
+    }
+
+    .upload-area:hover {
+      border-color: #007aff;
+      background-color: #f0f7ff;
+    }
+
+    .upload-area.dragover {
+      border-color: #007aff;
+      background-color: #e8f4ff;
+    }
+
+    .upload-icon {
+      font-size: 3.5rem;
+      margin-bottom: 20px;
+      color: #007aff;
+    }
+
+    .upload-text {
+      font-size: 1.2rem;
+      color: #1d1d1f;
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+
+    .upload-hint {
+      font-size: 0.95rem;
+      color: #86868b;
+    }
+
+    .preview-image-wrapper {
+      width: 100%;
+
+      max-width: 400px;
+
+      margin: 0 auto;
+      /* 居中展示 */
+      display: none;
+    }
+
+    .upload-area.has-image .preview-image-wrapper {
+      display: block;
+    }
+
+    .upload-area.has-image .upload-content {
+      display: none;
+    }
+
+    .preview-image {
+      width: 100%;
+
+      height: auto;
+
+      object-fit: contain;
+
+      object-position: center;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .btn {
+      background-color: #007aff;
+      color: #fff;
+      border: none;
+      padding: 16px 36px;
+      border-radius: 10px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-top: 25px;
+      box-shadow: 0 4px 8px rgba(0, 122, 255, 0.2);
+    }
+
+    .btn:hover {
+      background-color: #0051d5;
+      box-shadow: 0 6px 12px rgba(0, 81, 213, 0.2);
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn:disabled {
+      background-color: #d1d1d6;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+
+    .result-section {
+      display: none;
+      background-color: #fff;
+      border-radius: 16px;
+      padding: 30px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      width: 100%;
+    }
+
+    .main-layout.has-result .result-section {
+      width: 60%;
+    }
+
+
+    .tab-container {
+      margin-bottom: 20px;
+      border-bottom: 1px solid #e5e5e7;
+    }
+
+    .tab-buttons {
+      display: flex;
+      gap: 2px;
+    }
+
+    .tab-btn {
+      padding: 12px 24px;
+      background-color: #f5f5f7;
+      border: none;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn.active {
+      background-color: #fff;
+      color: #007aff;
+      border-bottom: 2px solid #007aff;
+    }
+
+    .tab-btn:hover:not(.active) {
+      background-color: #e8f4ff;
+    }
+
+    .tab-content {
+      display: none;
+      padding: 15px 0;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* 提示词卡片样式 */
+    .prompt-card {
+      background-color: #f9f9fb;
+      border-radius: 12px;
+      padding: 25px;
+      margin-bottom: 20px;
+    }
+
+    .prompt-card h3 {
+      font-size: 1.3rem;
+      margin-bottom: 20px;
+      color: #1d1d1f;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .lang-badge {
+      font-size: 0.8rem;
+      padding: 6px 12px;
+      border-radius: 6px;
+      background-color: #007aff;
+      color: #fff;
+      font-weight: 500;
+    }
+
+    .prompt-field {
+      margin-bottom: 20px;
+    }
+
+    .prompt-label {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #6e6e73;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .prompt-value {
+      border: none;
+      padding: 0;
+      resize: none;
+      min-height: auto;
+      background-color: transparent;
+      cursor: default;
+    }
+
+    .prompt-value:focus {
+      outline: none;
+      border-color: #007aff;
+      box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+    }
+
+    .field-actions {
+      display: none;
+    }
+
+    .prompt-card-content {
+      max-height: 300px;
+
+      overflow-y: auto;
+
+      padding-right: 8px;
+
+    }
+
+    .prompt-card-content::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .prompt-card-content::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 3px;
+    }
+
+    .prompt-card-content::-webkit-scrollbar-thumb {
+      background: #d1d1d6;
+      border-radius: 3px;
+    }
+
+    .prompt-card-content::-webkit-scrollbar-thumb:hover {
+      background: #007aff;
+    }
+
+    .copy-field-btn {
+      background-color: #34c759;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .copy-field-btn:hover {
+      background-color: #28a745;
+    }
+
+    .copy-field-btn.copied {
+      background-color: #86868b;
+    }
+
+    .full-prompt-box {
+      background-color: #fff;
+      border: 1px solid #e5e5e7;
+      border-radius: 10px;
+      padding: 20px;
+      margin-top: 20px;
+      position: relative;
+    }
+
+    .prompt-label.full {
+      font-size: 1rem;
+      margin-bottom: 12px;
+    }
+
+    .full-prompt-text {
+      font-size: 1rem;
+      color: #1d1d1f;
+      line-height: 1.6;
+      max-height: 400px;
+      overflow-y: auto;
+      min-height: 200px;
+      resize: vertical;
+      width: 100%;
+      border: 1px solid #e5e5e7;
+      border-radius: 8px;
+      padding: 15px;
+      font-family: inherit;
+    }
+
+    .full-prompt-text:focus {
+      outline: none;
+      border-color: #007aff;
+      box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+    }
+
+    .copy-btn {
+      background-color: #34c759;
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-top: 15px;
+    }
+
+    .copy-btn:hover {
+      background-color: #28a745;
+    }
+
+    .copy-btn:active {
+      transform: scale(0.95);
+    }
+
+    .copy-btn.copied {
+      background-color: #86868b;
+    }
+
+    /* 加载状态 */
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 40px;
+    }
+
+    .spinner {
+      border: 4px solid #e5e5e7;
+      border-top: 4px solid #007aff;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* 错误提示 */
+    .error-message {
+      background-color: #ff3b30;
+      color: #fff;
+      padding: 18px 24px;
+      border-radius: 10px;
+      margin: 20px auto;
+      text-align: center;
+      display: none;
+      font-size: 1rem;
+    }
+
+    footer {
+      text-align: center;
+      padding: 30px 20px;
+      color: #86868b;
+      font-size: 0.9rem;
+      margin-top: auto;
+    }
+
+    /* 移动端适配 */
+    @media (max-width: 992px) {
+      .main-layout.has-result {
+        flex-direction: column;
+      }
+
+      .main-layout.has-result .upload-section,
+      .main-layout.has-result .result-section {
+        width: 100%;
+        max-width: 100%;
+      }
+
+      h1 {
+        font-size: 2.2rem;
+      }
+
+      .upload-section {
+        padding: 30px;
+      }
+
+      .upload-area {
+        min-height: 250px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 1.8rem;
+      }
+
+      .prompt-card-content {
+        max-height: 200px;
+      }
+
+      .preview-image-wrapper {
+        max-width: 300px;
+      }
+
+      .container {
+        padding: 15px;
+      }
+
+      .upload-section {
+        padding: 20px;
+      }
+
+      .upload-area {
+        padding: 40px 15px;
+        min-height: 200px;
+      }
+
+      .result-section {
+        padding: 20px;
+      }
+
+      .prompt-card {
+        padding: 20px;
+      }
+
+      .tab-btn {
+        padding: 10px 16px;
+        font-size: 0.9rem;
+      }
+
+      .btn {
+        padding: 14px 28px;
+        font-size: 1rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .upload-area {
+        padding: 30px 10px;
+      }
+
+      .preview-image-wrapper {
+        max-width: 250px;
+      }
+
+      .upload-icon {
+        font-size: 2.5rem;
+      }
+
+      .upload-text {
+        font-size: 1rem;
+      }
+
+      .prompt-card {
+        padding: 15px;
+      }
+
+      .full-prompt-box {
+        padding: 15px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>绘画提示词生成器</h1>
+    <p class="subtitle">上传二次元/动漫图片,自动反推生成 AI 绘画提示词</p>
+  </header>
+
+  <div class="container">
+    <div class="main-layout" id="mainLayout">
+      <div class="upload-section">
+        <div class="upload-area" id="uploadArea">
+          <div class="upload-content">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">点击选择图片或拖拽到此处</div>
+            <div class="upload-hint">支持 JPG、PNG、WebP 格式</div>
+          </div>
+          <div class="preview-image-wrapper">
+            <img id="previewImage" class="preview-image" alt="预览图片">
+          </div>
+          <input type="file" id="fileInput" accept="image/*">
+        </div>
+        <button class="btn" id="generateBtn" disabled>生成提示词</button>
+      </div>
+
+      <!-- 加载状态 -->
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>正在分析图片并生成提示词...</p>
+      </div>
+
+      <!-- 错误提示 -->
+      <div class="error-message" id="errorMessage"></div>
+
+      <div class="result-section" id="resultSection">
+        <div class="tab-container">
+          <div class="tab-buttons">
+            <button class="tab-btn active" data-tab="cn">中文提示词</button>
+            <button class="tab-btn" data-tab="en">English Prompt</button>
+          </div>
+          <div class="tab-content active" id="cnTab">
+            <div class="prompt-card">
+              <h3>
+                中文提示词
+
+              </h3>
+              <div class="prompt-card-content" id="chinesePromptDetails"></div>
+              <div class="full-prompt-box">
+                <div class="prompt-label full">完整描述</div>
+                <textarea class="full-prompt-text" id="fullPromptCn"></textarea>
+                <button class="copy-btn" onclick="copyFullPrompt('fullPromptCn', this)">复制</button>
+              </div>
+            </div>
+          </div>
+          <div class="tab-content" id="enTab">
+            <div class="prompt-card">
+              <h3>
+                English Prompt
+
+              </h3>
+              <div class="prompt-card-content" id="englishPromptDetails"></div>
+              <div class="full-prompt-box">
+                <div class="prompt-label full">完整提示词</div>
+                <textarea class="full-prompt-text" id="fullPromptEn"></textarea>
+                <button class="copy-btn" onclick="copyFullPrompt('fullPromptEn', this)">复制</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const generateBtn = document.getElementById('generateBtn');
+    const previewImage = document.getElementById('previewImage');
+    const loading = document.getElementById('loading');
+    const errorMessage = document.getElementById('errorMessage');
+    const resultSection = document.getElementById('resultSection');
+    const mainLayout = document.getElementById('mainLayout');
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    let selectedFile = null;
+
+    // Tab切换逻辑
+    tabButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tabId = btn.dataset.tab;
+
+        // 移除所有active状态
+        tabButtons.forEach(b => b.classList.remove('active'));
+        tabContents.forEach(c => c.classList.remove('active'));
+
+        // 激活当前tab
+        btn.classList.add('active');
+        document.getElementById(`${tabId}Tab`).classList.add('active');
+      });
+    });
+
+    // 点击上传区域
+    uploadArea.addEventListener('click', () => fileInput.click());
+
+    // 文件选择
+    fileInput.addEventListener('change', (e) => {
+      handleFile(e.target.files[0]);
+    });
+
+    // 拖拽上传
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('dragover');
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.classList.remove('dragover');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      handleFile(e.dataTransfer.files[0]);
+    });
+
+    // 处理文件上传
+    function handleFile(file) {
+      if (!file || !file.type.startsWith('image/')) {
+        showError('请选择有效的图片文件');
+        return;
+      }
+
+      selectedFile = file;
+      generateBtn.disabled = false;
+
+      // 预览图片 - 固定长宽比展示
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        previewImage.src = e.target.result;
+        uploadArea.classList.add('has-image');
+      };
+      reader.readAsDataURL(file);
+
+      hideError();
+      resultSection.style.display = 'none';
+      mainLayout.classList.remove('has-result');
+    }
+
+    // 生成提示词
+    generateBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+
+      const formData = new FormData();
+      formData.append('image', selectedFile);
+
+      loading.style.display = 'block';
+      resultSection.style.display = 'none';
+      generateBtn.disabled = true;
+      hideError();
+
+      try {
+        const response = await fetch('/generate_prompt', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // 切换到左右布局
+          mainLayout.classList.add('has-result');
+          displayResults(data.prompt_data);
+        } else {
+          showError(data.error || '生成失败,请重试');
+        }
+      } catch (error) {
+        showError('网络错误: ' + error.message);
+      } finally {
+        loading.style.display = 'none';
+        generateBtn.disabled = false;
+      }
+    });
+
+    // 展示生成结果
+    function displayResults(promptData) {
+      // 如果是原始响应格式
+      if (promptData.raw_response) {
+        showError('AI 返回格式异常,请重试');
+        return;
+      }
+
+      // 显示英文提示词详情
+      const enDetails = document.getElementById('englishPromptDetails');
+      enDetails.innerHTML = generatePromptFields(promptData.english_prompt, 'en');
+
+      // 显示中文提示词详情
+      const cnDetails = document.getElementById('chinesePromptDetails');
+      cnDetails.innerHTML = generatePromptFields(promptData.chinese_prompt, 'cn');
+
+      // 显示完整提示词
+      document.getElementById('fullPromptEn').value = promptData.full_prompt_en || '';
+      document.getElementById('fullPromptCn').value = promptData.full_prompt_cn || '';
+
+      resultSection.style.display = 'block';
+    }
+
+    // 生成提示词字段（可编辑+可复制）
+    function generatePromptFields(promptObj, lang) {
+      const fieldLabels = {
+        'style_medium': lang === 'cn' ? '风格与媒介' : 'Style & Medium',
+        'style_details': lang === 'cn' ? '风格细节' : 'Style Details',
+        'scene': lang === 'cn' ? '场景描述' : 'Scene Description',
+        'subject': lang === 'cn' ? '主体角色' : 'Main Subject',
+        'outfit_props': lang === 'cn' ? '服装道具' : 'Outfit & Props',
+        'background': lang === 'cn' ? '背景' : 'Background',
+        'composition': lang === 'cn' ? '构图视角' : 'Composition & Perspective',
+        'lighting_color': lang === 'cn' ? '光照色调' : 'Lighting & Color',
+        'special_effects': lang === 'cn' ? '特殊效果' : 'Special Effects',
+        'avoid': lang === 'cn' ? '避免元素' : 'Avoid Elements'
+      };
+
+      let html = '';
+      for (const [key, label] of Object.entries(fieldLabels)) {
+        if (promptObj[key]) {
+          html += `
+            <div class="prompt-field">
+              <span class="prompt-label">${label}</span>
+              <div class="prompt-value">${promptObj[key]}</div>
+            </div>
+          `;
+        }
+      }
+      return html;
+    }
+
+    // 复制单个字段（带前缀）
+    function copyFieldPrompt(elementId, label, button) {
+      const text = document.getElementById(elementId).value;
+      const fullText = `${label}：${text}`;
+
+      navigator.clipboard.writeText(fullText).then(() => {
+        const originalText = button.textContent;
+        button.textContent = '✓ 已复制';
+        button.classList.add('copied');
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.classList.remove('copied');
+        }, 2000);
+      }).catch(err => {
+        showError('复制失败: ' + err.message);
+      });
+    }
+
+    // 复制完整提示词
+    function copyFullPrompt(elementId, button) {
+      const text = document.getElementById(elementId).value;
+
+      navigator.clipboard.writeText(text).then(() => {
+        const originalText = button.textContent;
+        button.textContent = '✓ 已复制';
+        button.classList.add('copied');
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.classList.remove('copied');
+        }, 2000);
+      }).catch(err => {
+        showError('复制失败: ' + err.message);
+      });
+    }
+
+    // 显示错误
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+      setTimeout(() => hideError(), 5000);
+    }
+
+    // 隐藏错误
+    function hideError() {
+      errorMessage.style.display = 'none';
+    }
+  </script>
+</body>
+
+</html>

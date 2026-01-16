@@ -1,0 +1,18 @@
+[
+  {
+    "role": "user",
+    "parts": [
+      {
+        "text": "请分析这张二次元图片并生成提示词: [示例图片: 蓝发双马尾少女做剪刀手]"
+      }
+    ]
+  },
+  {
+    "role": "model",
+    "parts": [
+      {
+        "text": "{\n  \"english_prompt\": {\n    \"style_medium\": \"Digital anime illustration\",\n    \"style_details\": \"Clean linework, cel-shading, soft color gradients, large expressive glossy eyes, modern moe character design\",\n    \"scene\": \"A young anime girl leans forward towards the camera while making double peace signs with her hands in a playful pose\",\n    \"subject\": \"Girl with dark blue hair styled in low twin pigtails with blue ribbons, blue eyes, blushing cheeks, and a slight smirk\",\n    \"outfit_props\": \"White long-sleeved button-up shirt with four stacked blue and white bows on the front, light blue pleated mini-skirt, blue and white striped thigh-high socks\",\n    \"background\": \"Minimalist vertical white rectangular panel framing the character against a soft, out-of-focus light-colored background\",\n    \"composition\": \"High-angle shot, leaning forward with foreshortening, thigh-up portrait, centered composition\",\n    \"lighting_color\": \"Bright and airy, cool-toned color palette consisting of whites and various shades of blue\",\n    \"special_effects\": \"Vertical rectangular framing overlay, subtle sweat drop graphic on the cheek\",\n    \"avoid\": \"realistic, 3D, dark colors, complex background, hats, glasses, different hand gestures, text, low-angle\"\n  },\n  \"chinese_prompt\": {\n    \"style_medium\": \"数字动漫插画\",\n    \"style_details\": \"清晰的线稿,赛璐璐着色,柔和的色彩渐变,大而富有表现力的光泽眼睛,现代萌系角色设计\",\n    \"scene\": \"一位年轻的动漫少女身体前倾面向镜头,双手做出剪刀手姿势,表情俏皮\",\n    \"subject\": \"深蓝色头发扎成低双马尾配蓝色蝴蝶结,蓝色眼睛,脸颊微红,嘴角带着一丝坏笑的少女\",\n    \"outfit_props\": \"白色长袖衬衫前胸有四个叠加的蓝白色蝴蝶结,浅蓝色百褶迷你裙,蓝白条纹过膝袜\",\n    \"background\": \"极简主义风格的垂直白色矩形面板框架,背景是柔和失焦的浅色调\",\n    \"composition\": \"俯视角度,身体前倾带透视缩短效果,大腿以上半身肖像,居中构图\",\n    \"lighting_color\": \"明亮通透,冷色调配色方案,以白色和各种蓝色为主\",\n    \"special_effects\": \"垂直矩形框架叠加,脸颊上有细微的汗滴图形\",\n    \"avoid\": \"写实风格,3D渲染,深色调,复杂背景,帽子,眼镜,其他手势,文字,低角度\"\n  },\n  \"full_prompt_en\": \"Digital anime illustration, clean linework, cel-shading, soft color gradients, large expressive glossy eyes, modern moe character design, young anime girl leaning forward towards camera, double peace signs, dark blue twin pigtails with blue ribbons, blue eyes, blushing cheeks, slight smirk, white long-sleeved button-up shirt with four blue and white bows, light blue pleated mini-skirt, blue and white striped thigh-high socks, minimalist vertical white rectangular framing, soft out-of-focus background, high-angle shot, foreshortening, thigh-up portrait, centered composition, bright and airy lighting, cool-toned color palette, whites and blues, vertical framing overlay, subtle sweat drop on cheek\",\n  \"full_prompt_cn\": \"数字动漫插画风格,清晰线稿和赛璐璐着色,柔和色彩渐变,大而富有表现力的光泽眼睛,现代萌系角色设计。画面中是一位深蓝色双马尾少女,配蓝色蝴蝶结,蓝色眼睛,脸颊微红,嘴角带坏笑。她身穿白色长袖衬衫,前胸有四个蓝白色蝴蝶结,浅蓝色百褶短裙,蓝白条纹过膝袜。少女身体前倾面向镜头,双手做剪刀手。采用俯视角度,透视缩短效果,大腿以上半身肖像,居中构图。极简白色矩形框架,柔和失焦浅色背景。明亮通透的光线,冷色调配色,以白色和蓝色系为主。画面有垂直矩形框架叠加,脸颊上有细微汗滴图形。\"\n}"
+      }
+    ]
+  }
+]
