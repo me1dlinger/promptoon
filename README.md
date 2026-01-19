@@ -71,25 +71,22 @@ cd promptoon
 pip install -r requirements.txt
 ```
 
-3. 配置环境变量：
-```bash
-export GEMINI_API_KEY="your_api_key_here"
-export HTTP_PROXY="http://host:port" 
-export HTTPS_PROXY="http://host:port"
-```
-
-4. 运行应用：
+3. 运行应用：
 ```bash
 python promptoon.py
 ```
 
-5. 浏览器访问：http://localhost:5000
+4. 浏览器访问：http://localhost:5000
 
 ## 界面截图
 
 ### 主界面 - 图片上传区域
 ![主界面上传区域](screenshots/image1.png)
 *支持拖拽上传或点击选择图片文件*
+
+### 模型设置
+![模型设置](screenshots/image4.png)
+*可配置不同AI模型*
 
 ### 生成结果 - 中文提示词展示
 ![中文提示词展示](screenshots/image2.png)
