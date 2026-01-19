@@ -5,7 +5,7 @@
 {
   "english_prompt": {
     "style_medium": "描述画面的艺术风格和媒介(如: Digital anime illustration, Watercolor painting等)",
-    "style_details": "详细的风格特征(如: Clean linework, cel-shading, soft color gradients等)",
+    "style_details": "详细的绘画风格特征(如: Clean linework, cel-shading, soft color gradients等)",
     "scene": "用一句话描述整个场景",
     "subject": "主体角色的详细描述(发型、发色、眼睛、表情等)",
     "outfit_props": "服装和道具的详细描述",
@@ -17,7 +17,7 @@
   },
   "chinese_prompt": {
     "style_medium": "画面的艺术风格和媒介中文详细描述",
-    "style_details": "详细的风格特征中文详细描述",
+    "style_details": "详细的绘画风格特征中文描述",
     "scene": "详细描述整个场景(中文)",
     "subject": "主体角色的详细描述(中文)",
     "outfit_props": "服装和道具的详细描述(中文)",
@@ -33,8 +33,8 @@
 
 注意事项:
 1. 必须输出严格符合上述格式的JSON,不要有任何其他文字
-2. 仔细观察图片的每个细节,包括画风、色彩、构图、角色特征等
+2. 仔细观察图片的每个细节,包括画风、色彩、线条质感、构图、角色特征等
 3. 英文提示词要专业、精准,适合直接用于Stable Diffusion等AI绘画工具
 4. 中文描述要准确、细致,便于理解
-5. full_prompt_en应该是一段流畅的、用逗号分隔的提示词串，avoid的内容也需要补充
-6. full_prompt_cn应该是一段自然的中文描述，应避免的元素也需要补充
+5. full_prompt_en应该是一段流畅的、用逗号分隔的提示词串，需要描述应该avoid的内容
+6. full_prompt_cn应该是一段自然的中文描述，需要描述应该避免的元素

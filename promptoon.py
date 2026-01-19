@@ -14,6 +14,7 @@ from cryptography.fernet import Fernet
 from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
 from PIL import Image
+from volcenginesdkarkruntime import Ark
 
 # 日志目录
 LOG_DIR = "logs"
@@ -43,7 +44,7 @@ file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 app = Flask(__name__)
 CORS(app)
-PROXY_URL = "http://127.0.0.1:7890"
+PROXY_URL = "http://host:port"
 os.environ["HTTP_PROXY"] = PROXY_URL
 os.environ["HTTPS_PROXY"] = PROXY_URL
 os.environ["ALL_PROXY"] = PROXY_URL
@@ -66,8 +67,6 @@ def decrypt_api_key(encrypted_api_key):
     """解密API Key"""
     return cipher_suite.decrypt(encrypted_api_key.encode()).decode()
 
-
-# 我们不再使用固定的API KEY，而是从前端传递
 
 UPLOAD_BASE_DIR = "./uploads"
 CONFIG_DIR = "./prompts"
@@ -292,51 +291,73 @@ def call_doubao_api(
 ):
     """调用豆包API生成提示词"""
     try:
-        # TODO: 需要实现豆包API的实际调用逻辑
-        # 目前返回固定字符串以满足接口
+        client = Ark(
+            base_url="https://ark.cn-beijing.volces.com/api/v3",
+            api_key=api_key,
+        )
+        response = client.responses.create(
+            model=model_version,
+            input=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "input_image",
+                            "image_url": f"data:image/jpeg;base64,{image_base64}",
+                        },
+                        {
+                            "type": "input_text",
+                            "text": SYSTEM_PROMPT,
+                        },
+                    ],
+                }
+            ],
+            thinking={"type": "disabled"},
+        )
+        logger.info(f"豆包API响应: {response}")
 
-        # 模拟API调用
-        import time
+        # 提取响应文本
+        if (
+            response.output
+            and len(response.output) > 0
+            and response.output[0].content
+            and len(response.output[0].content) > 0
+        ):
 
-        time.sleep(2)
+            response_text = response.output[0].content[0].text
+            logger.info(f"提取的响应文本: {response_text}")
+            try:
+                prompt_data = json.loads(response_text)
+                logger.info("✅ 成功解析豆包API返回的JSON数据")
+            except json.JSONDecodeError as e:
+                logger.error(f"❌ JSON解析失败: {e}")
+                # 如果解析失败，返回原始文本
+                prompt_data = {"raw_response": response_text}
+        else:
+            logger.error("❌ 响应结构异常，无法提取文本内容")
+            return jsonify({"success": False, "error": "API响应结构异常"}), 500
 
-        # 读取示例响应
-        example_response = {
-            "english_prompt": {
-                "style_medium": "Digital anime illustration",
-                "style_details": "Clean linework, cel-shading, soft color gradients, large expressive glossy eyes",
-                "scene": "A young anime girl_character in a playful pose",
-                "subject": "Girl with blue hair in twin pigtails, blue eyes, blushing cheeks",
-                "outfit_props": "White shirt with blue bows, blue pleated skirt, thigh-high socks",
-                "background": "Soft, out-of-focus light-colored background",
-                "composition": "High-angle shot, centered composition",
-                "lighting_color": "Bright and airy, cool-toned palette",
-                "special_effects": "Subtle sweat drop graphic",
-                "avoid": "realistic, 3D, dark colors, complex background",
-            },
-            "chinese_prompt": {
-                "style_medium": "数字动漫插画",
-                "style_details": "清晰的线稿,赛璐璐着色,柔和的色彩渐变,大而富有表现力的光泽眼睛",
-                "scene": "一位年轻的动漫女孩以俏皮的姿态出镜",
-                "subject": "蓝色双马尾少女,蓝色眼睛,脸颊泛红",
-                "outfit_props": "白色衬衫配蓝色蝴蝶结,蓝色百褶裙,过膝袜",
-                "background": "柔和失焦的浅色调背景",
-                "composition": "俯视角度,居中构图",
-                "lighting_color": "明亮通透,冷色调",
-                "special_effects": "细微的汗滴图形",
-                "avoid": "写实风格,3D渲染,深色调,复杂背景",
-            },
-            "full_prompt_en": "Digital anime illustration, clean linework, cel-shading, soft color gradients, large expressive glossy eyes, young anime girl_character in playful pose, blue twin pigtails, blue eyes, blushing cheeks, white shirt with blue bows, blue pleated skirt, thigh-high socks, soft out-of-focus light-colored background, high-angle shot, centered composition, bright and airy lighting, cool-toned palette, subtle sweat drop graphic",
-            "full_prompt_cn": "数字动漫插画风格,清晰线稿和赛璐璐着色,柔和色彩渐变,大而富有表现力的光泽眼睛。画面中是一位年轻的动漫女孩以俏皮姿态出镜,蓝色双马尾发型,蓝色眼睛,脸颊泛红。她身穿白色衬衫配有蓝色蝴蝶结,蓝色百褶裙和过膝袜。背景为柔和失焦的浅色调。采用俯视角度和居中构图,光线明亮通透呈冷色调,带有细微的汗滴图形特效。",
+        # 提取token使用信息
+        token_usage = {
+            "prompt_tokens": response.usage.input_tokens if response.usage else 0,
+            "completion_tokens": response.usage.output_tokens if response.usage else 0,
+            "total_tokens": response.usage.total_tokens if response.usage else 0,
+            "prompt_detail": {},
+            "completion_detail": {},
         }
 
+        # 保存详细结果到文件
         try:
             detail_path = os.path.join(
                 save_dir, f"{os.path.splitext(unique_filename)[0]}.json"
             )
             detail_content = {
                 "ip": get_real_ip(),
-                "prompt_data": example_response,
+                "prompt_data": prompt_data,
+                "token_usage": token_usage,
+                "response_id": response.id,
+                "model": response.model,
+                "status": response.status,
                 "timestamp": datetime.now().isoformat(),
             }
             with open(detail_path, "w", encoding="utf-8") as f:
@@ -345,11 +366,15 @@ def call_doubao_api(
         except Exception as e:
             logger.warning("⚠️ 保存提示词详情失败: %s", e)
 
+        # 返回给前端
         return jsonify(
             {
                 "success": True,
-                "prompt_data": example_response,
-                "raw_response": json.dumps(example_response, ensure_ascii=False),
+                "prompt_data": prompt_data,
+                "raw_response": response_text,
+                "token_usage": token_usage,
+                "response_id": response.id,
+                "model": response.model,
                 "uuid": file_uuid,
             }
         )
@@ -399,7 +424,6 @@ def generate_prompt():
             return jsonify({"success": False, "error": "API Key不能为空"}), 400
         try:
             api_key = decrypt_api_key(encrypted_api_key)
-            print(api_key)
         except Exception as e:
             logger.error(f"API Key解密失败: {e}")
             return jsonify({"success": False, "error": "API Key解密失败"}), 4000
@@ -457,68 +481,5 @@ def get_real_ip():
     return request.remote_addr
 
 
-def check_proxy_connectivity(proxy_url, test_host="www.google.com"):
-    try:
-        parsed = urlparse(proxy_url)
-        host = parsed.hostname
-        port = parsed.port
-        logger.info(f"检测代理可达性:{host}:{port}...")
-        with socket.create_connection((host, port), timeout=5):
-            logger.info("✅ 代理端口可达")
-            return True
-    except Exception as e:
-        logger.error("❌ 代理端口连接失败: %s", e)
-        return False
-
-
-def check_gemini_access():
-    try:
-        proxies = {"http": os.environ["HTTP_PROXY"], "https": os.environ["HTTPS_PROXY"]}
-        response = requests.get(
-            "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash-lite",
-            params={"key": GEMINI_API_KEY},
-            proxies=proxies,
-            timeout=10,
-        )
-        if response.status_code == 200 or response.status_code == 401:
-            return True
-        logger.error("Gemini API 访问错误: HTTP %s", response.status_code)
-        return False
-    except Exception as e:
-        logger.error("Gemini API 访问失败: %s", e)
-        return False
-
-
-def check_internet_via_proxy(proxy_url):
-    try:
-        logger.info("验证代理是否能访问外网 (Google)...")
-        proxies = {"http": proxy_url, "https": proxy_url}
-        response = requests.get("https://www.google.com", proxies=proxies, timeout=10)
-        if response.status_code == 200:
-            logger.info("✅ 能通过代理成功访问 Google")
-            return True
-        else:
-            logger.warning("❌ Google 返回非200状态码: %s", response.status_code)
-            return False
-    except Exception as e:
-        logger.error("❌ 无法通过代理访问 Google: %s", e)
-        return False
-
-
 if __name__ == "__main__":
-    logger.info("初始化环境检查...")
-
-    proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY")
-
-    if not check_proxy_connectivity(proxy):
-        logger.error("❌ 代理端口无法连接,程序即将退出。")
-        exit(1)
-
-    if not check_internet_via_proxy(proxy):
-        logger.error("❌ 无法通过代理访问外网,程序即将退出。")
-        exit(1)
-
-    logger.info("✅ 网络检查通过,准备启动 Flask 服务...")
-    logger.info("请确保依赖已安装:pip install flask flask-cors pillow requests")
-
     app.run(debug=True, host="0.0.0.0", port=5000)

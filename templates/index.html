@@ -13,7 +13,7 @@
     <h1>PROMPTOON</h1>
     <p class="subtitle">上传图片,自动反推生成 AI 绘画提示词</p>
     <!-- 当前模型显示 -->
-    <div class="current-model-display" id="currentModelDisplay">当前模型: GEMINI (gemini-2.5-flash-lite)</div>
+    <div class="current-model-display" id="currentModelDisplay">当前模型: 无</div>
     <!-- API设置按钮 -->
     <div class="api-settings-btn" id="apiSettingsBtn">⚙️</div>
   </header>
@@ -180,7 +180,43 @@
     const mainLayout = document.getElementById('mainLayout');
     const tabButtons = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
+    const manageModelsBtn = document.getElementById('manageModelsBtn');
+    const modelManagementModal = document.getElementById('modelManagementModal');
+    const cancelModelManagement = document.getElementById('cancelModelManagement');
+    const addVersionBtn = document.getElementById('addVersionBtn');
+    const saveModelsBtn = document.getElementById('saveModelsBtn');
+    const resetModelsBtn = document.getElementById('resetModelsBtn');
+    const modelListContainer = document.getElementById('modelListContainer');
+    const modelSelector = document.getElementById('modelSelector');
+    const apiSettingsBtn = document.getElementById('apiSettingsBtn');
+    const apiSettingsModal = document.getElementById('apiSettingsModal');
+    const cancelApiSettings = document.getElementById('cancelApiSettings');
+    const aiModelSelect = document.getElementById('aiModel');
+    const modelVersionSelect = document.getElementById('modelVersion');
+    const saveApiSettings = document.getElementById('saveApiSettings');
 
+    // 默认模型配置
+    const defaultModels = [
+      {
+        id: 'gemini',
+        name: 'GEMINI',
+        versions: [
+          { value: 'gemini-2.5-flash-lite', text: 'gemini-2.5-flash-lite' },
+          { value: 'gemini-3.0-pro', text: 'gemini-3.0-pro' }
+        ]
+      },
+      {
+        id: 'doubao',
+        name: '豆包',
+        versions: [
+          { value: 'Doubao-Seed-1.8', text: 'Doubao-Seed-1.8' },
+          { value: 'doubao-seed-1-6-lite-251015', text: 'Doubao-Seed-1.6-Lite' },
+          { value: 'Doubao-Seed-1.6-flash', text: 'Doubao-Seed-1.6-flash' }
+        ]
+      }
+    ];
+
+    let currentModels = [];
     let selectedFile = null;
 
     // Tab切换逻辑
@@ -225,7 +261,7 @@
     // 处理文件上传
     function handleFile(file) {
       if (!file || !file.type.startsWith('image/')) {
-        showMessage('请选择有效的图片文件 Key', '错误', 3000);
+        showMessage('请选择有效的图片文件', '错误', 3000);
         return;
       }
 
@@ -260,7 +296,7 @@
       formData.append('api_model', apiSettings.model);
       formData.append('model_version', apiSettings.version);
       // 发送加密后的API Key
-      formData.append('api_key', apiSettings.apiKey);;
+      formData.append('api_key', apiSettings.apiKey);
 
       loading.style.display = 'block';
       resultSection.style.display = 'none';
@@ -339,6 +375,7 @@
       }
       return html;
     }
+
     // 复制完整提示词
     function copyFullPrompt(elementId, button) {
       const text = document.getElementById(elementId).value;
@@ -355,6 +392,7 @@
         showMessage('复制失败: ' + err.message, '错误', 3000);
       });
     }
+
     // 确认弹窗函数
     function showConfirm(message) {
       return new Promise((resolve) => {
@@ -380,6 +418,7 @@
         confirmCancel.addEventListener('click', handleCancel);
       });
     }
+
     // 消息弹窗
     function showMessage(message, title = '提示', duration = 3000) {
       const modal = document.getElementById('messageModal');
@@ -396,25 +435,6 @@
         modal.style.display = 'none';
       }, duration);
     }
-    const apiSettingsBtn = document.getElementById('apiSettingsBtn');
-    const apiSettingsModal = document.getElementById('apiSettingsModal');
-    const cancelApiSettings = document.getElementById('cancelApiSettings');
-    const aiModelSelect = document.getElementById('aiModel');
-    const modelVersionSelect = document.getElementById('modelVersion');
-    const saveApiSettings = document.getElementById('saveApiSettings');
-
-    const modelVersions = {
-      gemini: [
-        { value: 'gemini-2.5-flash-lite', text: 'gemini-2.5-flash-lite' },
-        { value: 'gemini-3.0-pro', text: 'gemini-3.0-pro' }
-      ],
-      doubao: [
-        { value: 'Doubao-Seed-1.8', text: 'Doubao-Seed-1.8' },
-        { value: 'Doubao-Seed-1.6', text: 'Doubao-Seed-1.6' },
-        { value: 'Doubao-Seed-1.6-flash', text: 'Doubao-Seed-1.6-flash' }
-      ]
-    };
-    // 打开API
     apiSettingsBtn.addEventListener('click', () => {
       // 加载已保存
       const savedSettings = getSavedApiSettings();
@@ -422,15 +442,20 @@
         aiModelSelect.value = savedSettings.model || (currentModels.length > 0 ? currentModels[0].id : 'gemini');
         updateModelVersions(savedSettings.model || (currentModels.length > 0 ? currentModels[0].id : 'gemini'));
         modelVersionSelect.value = savedSettings.version || '';
-      } else {
-        const defaultModel = currentModels.length > 0 ? currentModels[0].id : 'gemini';
-        aiModelSelect.value = defaultModel;
-        updateModelVersions(defaultModel);
+        // 为每个模型缓存API KEY
+        if (!window.modelApiKeys) {
+          window.modelApiKeys = {};
+        }
+        if (savedSettings.apiKey) {
+          window.modelApiKeys[savedSettings.model] = savedSettings.apiKey;
+        }
+        // 显示当前模型的API KEY（如果有的话）
+        document.getElementById('apiKey').value = window.modelApiKeys[savedSettings.model] || '';
       }
-      document.getElementById('apiKey').value = '';
 
       apiSettingsModal.style.display = 'block';
     });
+
     cancelApiSettings.addEventListener('click', () => {
       apiSettingsModal.style.display = 'none';
     });
@@ -443,36 +468,50 @@
         messageModal.style.display = 'none';
       }
     });
-
     aiModelSelect.addEventListener('change', (e) => {
+      // 缓存当前模型的API KEY
+      const savedSettings = getSavedApiSettings();
+      const currentModel = savedSettings ? savedSettings.model : (currentModels.length > 0 ? currentModels[0].id : 'gemini');
+      const apiKeyInput = document.getElementById('apiKey');
+
+      // 初始化模型API KEY缓存对象
+      if (!window.modelApiKeys) {
+        window.modelApiKeys = {};
+      }
+
+      // 缓存当前模型的API KEY
+      if (currentModel && apiKeyInput.value) {
+        window.modelApiKeys[currentModel] = apiKeyInput.value;
+      }
+
+      // 切换模型版本
       updateModelVersions(e.target.value);
+
+      // 恢复新模型的API KEY（如果有的话）
+      const newModel = e.target.value;
+      apiKeyInput.value = window.modelApiKeys[newModel] || '';
     });
 
-    function updateModelVersions(model) {
+    // 更新模型版本选择器
+    function updateModelVersions(modelId) {
       // 清空现有选项
       modelVersionSelect.innerHTML = '';
 
       // 获取当前模型的版本
-      let versions = [];
-      const modelConfig = currentModels.find(m => m.id === model);
-      if (modelConfig) {
-        versions = modelConfig.versions;
-      } else {
-        // fallback
-        versions = modelVersions[model] || [];
-      }
+      const modelConfig = currentModels.find(m => m.id === modelId);
+      if (modelConfig && modelConfig.versions) {
+        // 添加新选项
+        modelConfig.versions.forEach(version => {
+          const option = document.createElement('option');
+          option.value = version.value;
+          option.textContent = version.text;
+          modelVersionSelect.appendChild(option);
+        });
 
-      // 添加新选项
-      versions.forEach(version => {
-        const option = document.createElement('option');
-        option.value = version.value;
-        option.textContent = version.text;
-        modelVersionSelect.appendChild(option);
-      });
-
-      // 默认选择第一个选项
-      if (versions.length > 0) {
-        modelVersionSelect.selectedIndex = 0;
+        // 默认选择第一个选项
+        if (modelConfig.versions.length > 0) {
+          modelVersionSelect.selectedIndex = 0;
+        }
       }
     }
     // 保存API设置
@@ -484,6 +523,30 @@
       if (!model || !version) {
         showMessage('请选择AI模型和模型版本', '错误', 3000);
         return;
+      }
+
+      // 检查是否切换了模型但没有提供新的API KEY
+      const savedSettings = getSavedApiSettings();
+      const isModelChanged = savedSettings && savedSettings.model !== model;
+
+      // 如果切换了模型但没有提供API KEY，阻止保存
+      if (isModelChanged && !apiKey) {
+        showMessage('切换模型后请输入对应的API Key', '错误', 3000);
+        return;
+      }
+
+      // 如果没有切换模型且没有输入新的API KEY，使用原有的
+      if (!isModelChanged && !apiKey) {
+        if (savedSettings && savedSettings.apiKey) {
+          // 缓存API KEY到对应模型
+          if (!window.modelApiKeys) {
+            window.modelApiKeys = {};
+          }
+          window.modelApiKeys[model] = ''; // 清空输入框但保留原有密钥
+        } else {
+          showMessage('请输入API Key', '错误', 3000);
+          return;
+        }
       }
 
       const settings = {
@@ -505,6 +568,11 @@
 
           if (data.success) {
             settings.apiKey = data.encrypted_key;
+            // 缓存新输入的API KEY
+            if (!window.modelApiKeys) {
+              window.modelApiKeys = {};
+            }
+            window.modelApiKeys[model] = apiKey;
           } else {
             showMessage('API Key加密失败: ' + data.error, '错误', 3000);
             return;
@@ -514,9 +582,12 @@
           return;
         }
       } else {
-        const savedSettings = getSavedApiSettings();
+        // 使用已保存的API KEY
         if (savedSettings && savedSettings.apiKey) {
           settings.apiKey = savedSettings.apiKey;
+        } else {
+          showMessage('请输入API Key', '错误', 3000);
+          return;
         }
       }
 
@@ -525,6 +596,7 @@
       apiSettingsModal.style.display = 'none';
       showMessage('API设置已保存', '成功', 2000);
     });
+
     function getSavedApiSettings() {
       const settingsStr = localStorage.getItem('apiSettings');
       if (settingsStr) {
@@ -550,52 +622,14 @@
 
         // 找到当前版本的显示文本
         let versionText = savedSettings.version;
-        if (model) {
+        if (model && model.versions) {
           const version = model.versions.find(v => v.value === savedSettings.version);
           versionText = version ? version.text : savedSettings.version;
         }
-
         currentModelDisplay.textContent = `当前模型: ${modelName} (${versionText})`;
-      } else {
-        // 默认显示
-        const defaultModel = currentModels.length > 0 ? currentModels[0] : { name: 'GEMINI', id: 'gemini' };
-        const defaultVersion = defaultModel.versions && defaultModel.versions.length > 0 ?
-          defaultModel.versions[0].text : 'gemini-2.5-flash-lite';
-        currentModelDisplay.textContent = `当前模型: ${defaultModel.name} (${defaultVersion})`;
       }
     }
 
-    // 模型管理功能
-    const manageModelsBtn = document.getElementById('manageModelsBtn');
-    const modelManagementModal = document.getElementById('modelManagementModal');
-    const cancelModelManagement = document.getElementById('cancelModelManagement');
-    const addVersionBtn = document.getElementById('addVersionBtn');
-    const saveModelsBtn = document.getElementById('saveModelsBtn');
-    const resetModelsBtn = document.getElementById('resetModelsBtn');
-    const modelListContainer = document.getElementById('modelListContainer');
-    const modelSelector = document.getElementById('modelSelector');
-
-    // 默认模型配置
-    const defaultModels = [
-      {
-        id: 'gemini',
-        name: 'GEMINI',
-        versions: [
-          { value: 'gemini-2.5-flash-lite', text: 'gemini-2.5-flash-lite' },
-          { value: 'gemini-3.0-pro', text: 'gemini-3.0-pro' }
-        ]
-      },
-      {
-        id: 'doubao',
-        name: '豆包',
-        versions: [
-          { value: 'Doubao-Seed-1.8', text: 'Doubao-Seed-1.8' },
-          { value: 'Doubao-Seed-1.6', text: 'Doubao-Seed-1.6' },
-          { value: 'Doubao-Seed-1.6-flash', text: 'Doubao-Seed-1.6-flash' }
-        ]
-      }
-    ];
-    let currentModels = [];
     // 初始化
     function initModels() {
       const savedModels = localStorage.getItem('aiModels');
@@ -604,17 +638,17 @@
           currentModels = JSON.parse(savedModels);
         } catch (e) {
           console.error('解析模型配置失败，使用默认配置:', e);
-          currentModels = defaultModels;
+          currentModels = JSON.parse(JSON.stringify(defaultModels));
         }
       } else {
-        currentModels = defaultModels;
+        currentModels = JSON.parse(JSON.stringify(defaultModels));
         localStorage.setItem('aiModels', JSON.stringify(defaultModels));
       }
       updateModelSelectors();
       updateCurrentModelDisplay();
     }
 
-    // 更新模型
+    // 更新模型选择器
     function updateModelSelectors() {
       aiModelSelect.innerHTML = '';
       modelSelector.innerHTML = '';
@@ -635,6 +669,7 @@
 
       updateModelListDisplay();
     }
+
     function updateModelListDisplay() {
       modelListContainer.innerHTML = '';
 
@@ -654,12 +689,12 @@
           <div>
             <strong>版本列表:</strong>
             <ul id="versions-list-${modelIndex}" style="margin-top: 10px; padding-left: 20px;">
-              ${model.versions.map((version, versionIndex) => `
+              ${model.versions ? model.versions.map((version, versionIndex) => `
                 <li style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
                   <span>${version.text} (${version.value})</span>
                   <button class="remove-version-btn btn btn-secondary" data-model-index="${modelIndex}" data-version-index="${versionIndex}" style="padding: 2px 6px; font-size: 0.7rem;">删除</button>
                 </li>
-              `).join('')}
+              `).join('') : '<li>无版本</li>'}
             </ul>
           </div>
         `;
@@ -668,21 +703,17 @@
       });
       bindRemoveEvents();
     }
+
     function bindRemoveEvents() {
-      document.querySelectorAll('.remove-model-btn').forEach(button => {
-        button.addEventListener('click', (e) => {
-          const modelIndex = parseInt(e.target.getAttribute('data-index'));
-          if (confirm(`确定要删除模型 "${currentModels[modelIndex].name}" 吗？`)) {
-            currentModels.splice(modelIndex, 1);
-            updateModelListDisplay();
-            updateModelSelectors();
-          }
-        });
-      });
       document.querySelectorAll('.remove-version-btn').forEach(button => {
         button.addEventListener('click', async (e) => {
           const modelIndex = parseInt(e.target.getAttribute('data-model-index'));
           const versionIndex = parseInt(e.target.getAttribute('data-version-index'));
+
+          if (!currentModels[modelIndex] || !currentModels[modelIndex].versions) {
+            return;
+          }
+
           const versionText = currentModels[modelIndex].versions[versionIndex].text;
 
           const result = await showConfirm(`确定要删除版本 "${versionText}" 吗？`);
@@ -693,11 +724,13 @@
         });
       });
     }
+
     manageModelsBtn.addEventListener('click', () => {
       apiSettingsModal.style.display = 'none';
       modelManagementModal.style.display = 'block';
       updateModelListDisplay();
     });
+
     cancelModelManagement.addEventListener('click', () => {
       modelManagementModal.style.display = 'none';
       apiSettingsModal.style.display = 'block';
@@ -728,7 +761,12 @@
         return;
       }
 
-      // 检查
+      // 确保版本数组存在
+      if (!model.versions) {
+        model.versions = [];
+      }
+
+      // 检查重复
       if (model.versions.some(v => v.value === newVersionValue)) {
         showMessage('该模型下已存在相同版本值', '错误', 3000);
         return;
@@ -747,11 +785,6 @@
 
     saveModelsBtn.addEventListener('click', () => {
       localStorage.setItem('aiModels', JSON.stringify(currentModels));
-      const newModelVersions = {};
-      currentModels.forEach(model => {
-        newModelVersions[model.id] = model.versions;
-      });
-      Object.assign(modelVersions, newModelVersions);
       updateModelSelectors();
 
       modelManagementModal.style.display = 'none';
@@ -759,16 +792,19 @@
       updateCurrentModelDisplay();
       reloadCurrentModelSettings();
     });
+
     resetModelsBtn.addEventListener('click', async () => {
       const result = await showConfirm('确定要恢复默认模型配置吗？这将丢失所有自定义版本。');
       if (result) {
-        currentModels = JSON.parse(JSON.stringify(defaultModels));
+        currentModels = JSON.parse(JSON.stringify(defaultModels)); // 深拷贝默认配置
+        localStorage.setItem('aiModels', JSON.stringify(defaultModels));
         updateModelListDisplay();
         updateModelSelectors();
         updateCurrentModelDisplay();
         showMessage('已恢复默认配置', '成功', 2000);
       }
     });
+
     function reloadCurrentModelSettings() {
       const savedSettings = getSavedApiSettings();
       if (savedSettings) {
