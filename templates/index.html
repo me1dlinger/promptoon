@@ -256,13 +256,11 @@
 
       const formData = new FormData();
       formData.append('image', selectedFile);
-
       // 添加API配置到请求中
       formData.append('api_model', apiSettings.model);
       formData.append('model_version', apiSettings.version);
-      // 解密API Key再发送
-      const decryptedApiKey = atob(apiSettings.apiKey);
-      formData.append('api_key', decryptedApiKey);
+      // 发送加密后的API Key
+      formData.append('api_key', apiSettings.apiKey);;
 
       loading.style.display = 'block';
       resultSection.style.display = 'none';
@@ -478,7 +476,7 @@
       }
     }
     // 保存API设置
-    saveApiSettings.addEventListener('click', () => {
+    saveApiSettings.addEventListener('click', async () => {
       const model = aiModelSelect.value;
       const version = modelVersionSelect.value;
       const apiKey = document.getElementById('apiKey').value;
@@ -487,13 +485,34 @@
         showMessage('请选择AI模型和模型版本', '错误', 3000);
         return;
       }
+
       const settings = {
         model: model,
         version: version
       };
+
       if (apiKey) {
-        const encryptedApiKey = btoa(apiKey); // 简单的Base64加密，实际应用中应使用更强的加密方法
-        settings.apiKey = encryptedApiKey;
+        try {
+          const response = await fetch('/encrypt_api_key', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ api_key: apiKey })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            settings.apiKey = data.encrypted_key;
+          } else {
+            showMessage('API Key加密失败: ' + data.error, '错误', 3000);
+            return;
+          }
+        } catch (error) {
+          showMessage('加密API Key时发生错误: ' + error.message, '错误', 3000);
+          return;
+        }
       } else {
         const savedSettings = getSavedApiSettings();
         if (savedSettings && savedSettings.apiKey) {

@@ -10,6 +10,7 @@ from logging.handlers import TimedRotatingFileHandler
 from urllib.parse import urlparse
 
 import requests
+from cryptography.fernet import Fernet
 from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
 from PIL import Image
@@ -40,7 +41,6 @@ file_handler = TimedRotatingFileHandler(
 )
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
-
 app = Flask(__name__)
 CORS(app)
 PROXY_URL = "http://127.0.0.1:7890"
@@ -48,10 +48,24 @@ os.environ["HTTP_PROXY"] = PROXY_URL
 os.environ["HTTPS_PROXY"] = PROXY_URL
 os.environ["ALL_PROXY"] = PROXY_URL
 
+ENCRYPTION_KEY = b"zDqHdcnVYuuo6RLCfm7LZ-RQHBPHtW3P9B9JII4GjwM="
+cipher_suite = Fernet(ENCRYPTION_KEY)
+
 # 设置requests的默认代理
 proxies = {"http": PROXY_URL, "https": PROXY_URL}
 
 logger.info(f"✅ 已设置代理: {PROXY_URL}")
+
+
+def encrypt_api_key(api_key):
+    """加密API Key"""
+    return cipher_suite.encrypt(api_key.encode()).decode()
+
+
+def decrypt_api_key(encrypted_api_key):
+    """解密API Key"""
+    return cipher_suite.decrypt(encrypted_api_key.encode()).decode()
+
 
 # 我们不再使用固定的API KEY，而是从前端传递
 
@@ -350,6 +364,23 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/encrypt_api_key", methods=["POST"])
+def encrypt_api_key_route():
+    try:
+        data = request.get_json()
+        api_key = data.get("api_key")
+
+        if not api_key:
+            return jsonify({"success": False, "error": "API Key不能为空"}), 400
+
+        # 加密API Key
+        encrypted_key = encrypt_api_key(api_key)
+        return jsonify({"success": True, "encrypted_key": encrypted_key})
+    except Exception as e:
+        logger.exception("加密API Key失败: %s", e)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @app.route("/generate_prompt", methods=["POST"])
 def generate_prompt():
     try:
@@ -359,14 +390,19 @@ def generate_prompt():
         file = request.files["image"]
         if file.filename == "":
             return jsonify({"success": False, "error": "没有选择文件"}), 400
-
         # 获取API配置参数
         api_model = request.form.get("api_model", "gemini")
         model_version = request.form.get("model_version", "gemini-2.5-flash-lite")
-        api_key = request.form.get("api_key")
+        encrypted_api_key = request.form.get("api_key")
 
-        if not api_key:
+        if not encrypted_api_key:
             return jsonify({"success": False, "error": "API Key不能为空"}), 400
+        try:
+            api_key = decrypt_api_key(encrypted_api_key)
+            print(api_key)
+        except Exception as e:
+            logger.error(f"API Key解密失败: {e}")
+            return jsonify({"success": False, "error": "API Key解密失败"}), 4000
 
         image_data = file.read()
         today_str = datetime.now().strftime("%Y-%m-%d")
