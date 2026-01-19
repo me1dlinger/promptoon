@@ -263,11 +263,23 @@
       uploadArea.classList.remove('dragover');
       handleFile(e.dataTransfer.files[0]);
     });
-
     // 处理文件上传
     function handleFile(file) {
-      if (!file || !file.type.startsWith('image/')) {
+      if (!file) {
         showMessage('请选择有效的图片文件', '错误', 3000);
+        return;
+      }
+
+      // 严格检查文件类型，只允许 jpg, jpeg, png, webp，不允许 gif
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!allowedTypes.includes(file.type.toLowerCase())) {
+        showMessage('只支持 JPG、PNG、WebP 格式的图片文件，不支持 GIF', '错误', 3000);
+        return;
+      }
+
+      // 检查文件大小（前端初步检查，后端还会再次验证）
+      if (file.size > 10 * 1024 * 1024) { // 10MB
+        showMessage('图片文件大小不能超过 10MB', '错误', 3000);
         return;
       }
 
@@ -837,4 +849,4 @@
   </footer>
 </body>
 
-</html>>
+</html>

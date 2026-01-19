@@ -114,9 +114,11 @@ def compress_image(image_data, max_size_mb=1):
             buffer = io.BytesIO()
             img.save(buffer, format="JPEG", quality=quality, optimize=True)
             compressed_data = buffer.getvalue()
-            if len(compressed_data) <= max_size_bytes or quality <= 10:
+            if (
+                len(compressed_data) <= max_size_bytes or quality <= 5
+            ):  # 降低最低质量限制
                 return compressed_data
-            quality -= 10
+            quality -= 5  # 更精细的质量调节
 
     except Exception as e:
         logger.exception("图片压缩失败: %s", e)
@@ -397,6 +399,40 @@ def generate_prompt():
         file = request.files["image"]
         if file.filename == "":
             return jsonify({"success": False, "error": "没有选择文件"}), 400
+
+        # 检查文件类型，只允许 jpg, jpeg, png, webp，不允许 gif
+        allowed_extensions = {"jpg", "jpeg", "png", "webp"}
+        filename = file.filename.lower()
+        file_extension = filename.rsplit(".", 1)[1] if "." in filename else ""
+
+        if file_extension not in allowed_extensions:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "error": "只支持 JPG、PNG、WebP 格式的图片文件，不支持 GIF",
+                    }
+                ),
+                400,
+            )
+        allowed_mime_types = {"image/jpeg", "image/png", "image/webp"}
+        if file.content_type not in allowed_mime_types:
+            return (
+                jsonify(
+                    {"success": False, "error": "只支持 JPG、PNG、WebP 格式的图片文件"}
+                ),
+                400,
+            )
+
+        image_data = file.read()
+
+        max_file_size = 10 * 1024 * 1024 
+        if len(image_data) > max_file_size:
+            return (
+                jsonify({"success": False, "error": "图片文件大小不能超过 10MB"}),
+                400,
+            )
+
         # 获取API配置参数
         api_model = request.form.get("api_model", "gemini")
         model_version = request.form.get("model_version", "gemini-2.5-flash-lite")
@@ -408,9 +444,8 @@ def generate_prompt():
             api_key = decrypt_api_key(encrypted_api_key)
         except Exception as e:
             logger.error(f"API Key解密失败: {e}")
-            return jsonify({"success": False, "error": "API Key解密失败"}), 4000
+            return jsonify({"success": False, "error": "API Key解密失败"}), 400
 
-        image_data = file.read()
         today_str = datetime.now().strftime("%Y-%m-%d")
         save_dir = os.path.join(UPLOAD_BASE_DIR, today_str)
         os.makedirs(save_dir, exist_ok=True)
@@ -419,15 +454,25 @@ def generate_prompt():
         unique_filename = f"{file_uuid}{ext}"
         save_path = os.path.join(save_dir, unique_filename)
 
+        # 保存原图
         with open(save_path, "wb") as f:
             f.write(image_data)
 
-        if len(image_data) > 3 * 1024 * 1024:
-            logger.info("图片超过3MB,开始压缩...")
-            image_data = compress_image(image_data, max_size_mb=0.5)
-            logger.info(f"压缩后图片大小: {len(image_data) / 1024 / 1024:.2f}MB")
+        compressed_image_data = image_data
+        max_compressed_size = 500 * 1024 
+        if len(image_data) > max_compressed_size:
+            logger.info("图片超过500KB,开始压缩...")
+            compressed_image_data = compress_image(
+                image_data, max_size_mb=0.5
+            )
+            if len(compressed_image_data) > max_compressed_size:
+               
+                compressed_image_data = compress_image(
+                    compressed_image_data, max_size_mb=0.4
+                )
+            logger.info(f"压缩后图片大小: {len(compressed_image_data) / 1024:.2f}KB")
 
-        image_base64 = base64.b64encode(image_data).decode("utf-8")
+        image_base64 = base64.b64encode(compressed_image_data).decode("utf-8")
 
         # 根据选择的模型调用相应的API
         if api_model == "gemini":
