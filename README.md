@@ -1,6 +1,6 @@
 # Promptoon - AI绘画提示词生成器
 
-Promptoon 是一个基于 Gemini AI 的绘画提示词生成工具，能够通过分析上传的二次元/动漫风格图片，自动生成详细的中英文 AI 绘画提示词。
+Promptoon 是一个绘画提示词生成工具，能够通过分析上传的二次元/动漫风格图片，自动生成详细的中英文 AI 绘画提示词。
 
 ## 功能说明
 
@@ -29,14 +29,24 @@ Promptoon 是一个基于 Gemini AI 的绘画提示词生成工具，能够通�
 
 ```
 promptoon/
-├── promptoon.py           # 主程序文件
-├── requirements.txt       # Python依赖包列表
-├── uploads/              # 上传图片存储目录
-├── prompts/              # 提示词配置文件目录
-│   ├── default_prompt.txt    # 提示词生成规则定义
-│   └── default_dialogs.json  # 示例对话样本
-├── templates/            # HTML模板目录
-│   └── index.html        # 主页面模板
+├── conf/                 # 配置文件目录
+│   └── supervisord.conf  # 进程管理配置文件
+├── docker-compose.yml    # Docker容器编排配置
+├── Dockerfile            # Docker镜像构建文件
+├── LICENSE               # 许可证文件
+├── python/               # Python主程序目录
+│   ├── promptoon.py      # 主程序文件
+│   ├── requirements.txt  # Python依赖包列表
+│   ├── prompts/          # 提示词配置文件目录
+│   │   ├── default_prompt.txt    # 提示词生成规则定义
+│   │   └── default_dialogs.json  # 示例对话样本
+│   ├── static/           # 静态资源目录
+│   │   └── css/          # CSS样式文件目录
+│   │       └── style.css # 主样式文件
+│   └── templates/        # HTML模板目录
+│       └── index.html    # 主页面模板
+├── README.md             # 项目说明文档
+└── screenshots/          # 截图文件目录
 ```
 
 ## 环境依赖
@@ -104,3 +114,13 @@ python promptoon.py
 - 支持 JPG/PNG/WebP 格式图片
 - 应用需要网络连接以调用 Gemini API
 - 如果使用代理，请确保代理服务器正常工作
+
+## 声明
+
+本项目仅供学习交流使用，请注意：
+
+1. 请勿上传包含版权保护的作品或他人创作的图像，避免可能的版权争议
+2. 本项目不对生成的提示词内容负责，用户应自行判断和承担使用风险
+3. 本项目不拥有用户上传图片的版权，分析过程仅为技术研究目的
+4. 如涉及第三方知识产权，请用户自行承担责任
+5. 本项目开发者不对用户使用本工具产生的任何后果承担法律责任

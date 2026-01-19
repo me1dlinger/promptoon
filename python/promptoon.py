@@ -3,12 +3,9 @@ import io
 import json
 import logging
 import os
-import socket
 import uuid
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
-from urllib.parse import urlparse
-
 import requests
 from cryptography.fernet import Fernet
 from flask import Flask, jsonify, render_template, request
@@ -17,7 +14,7 @@ from PIL import Image
 from volcenginesdkarkruntime import Ark
 
 # 日志目录
-LOG_DIR = "logs"
+LOG_DIR = "./logs"
 os.makedirs(LOG_DIR, exist_ok=True)
 
 # 创建日志器
@@ -44,18 +41,10 @@ file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 app = Flask(__name__)
 CORS(app)
-PROXY_URL = "http://host:port"
-os.environ["HTTP_PROXY"] = PROXY_URL
-os.environ["HTTPS_PROXY"] = PROXY_URL
-os.environ["ALL_PROXY"] = PROXY_URL
+
 
 ENCRYPTION_KEY = b"zDqHdcnVYuuo6RLCfm7LZ-RQHBPHtW3P9B9JII4GjwM="
 cipher_suite = Fernet(ENCRYPTION_KEY)
-
-# 设置requests的默认代理
-proxies = {"http": PROXY_URL, "https": PROXY_URL}
-
-logger.info(f"✅ 已设置代理: {PROXY_URL}")
 
 
 def encrypt_api_key(api_key):
@@ -201,13 +190,6 @@ def call_gemini_api(
             "http": os.environ.get("HTTP_PROXY", ""),
             "https": os.environ.get("HTTPS_PROXY", ""),
         }
-
-        # 检查代理连通性
-        if not check_proxy_connectivity(
-            os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY")
-        ):
-            return jsonify({"success": False, "error": "代理服务器无法连接"}), 500
-
         logger.info(f"开始请求 Gemini API ({model_version})...")
         response = requests.post(
             url,

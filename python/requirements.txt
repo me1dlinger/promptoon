@@ -3,4 +3,4 @@ flask-cors
 pillow
 requests
 cryptography
-volcenginesdkarkruntime
+volcengine-python-sdk[ark]

@@ -1,0 +1,12 @@
+version: '3'
+services:
+  promptoon:
+    image: promptoon:latest
+    container_name: promptoon
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - TZ=Asia/Shanghai
+      - HTTP_PROXY=http://host:port
+      - HTTPS_PROXY=http://host:port
