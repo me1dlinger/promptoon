@@ -5,553 +5,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>绘画提示词生成器</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      background-color: #f5f5f7;
-      color: #1d1d1f;
-      line-height: 1.6;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .container {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 20px;
-      width: 100%;
-      flex: 1;
-    }
-
-    header {
-      text-align: center;
-      padding: 40px 20px;
-      background-color: #fff;
-      border-bottom: 1px solid #e5e5e7;
-    }
-
-    h1 {
-      font-size: 2.5rem;
-      font-weight: 600;
-      margin-bottom: 10px;
-      color: #1d1d1f;
-    }
-
-    .subtitle {
-      font-size: 1rem;
-      color: #6e6e73;
-    }
-
-    .main-layout {
-      display: flex;
-      flex-direction: column;
-      gap: 30px;
-    }
-
-    .main-layout.has-result {
-      flex-direction: row;
-    }
-
-    .upload-section {
-      background-color: #fff;
-      border-radius: 16px;
-      padding: 40px;
-      text-align: center;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-      width: 100%;
-    }
-
-    .main-layout.has-result .upload-section {
-      width: 40%;
-      max-width: 500px;
-    }
-
-    .upload-area {
-      border: 2px dashed #d1d1d6;
-      border-radius: 12px;
-      padding: 60px 20px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      position: relative;
-      overflow: hidden;
-      background-color: #f9f9fb;
-      min-height: auto;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .upload-area.has-image {
-      padding: 0;
-      background-color: #fff;
-      border: 2px solid #007aff;
-    }
-
-    .upload-area:hover {
-      border-color: #007aff;
-      background-color: #f0f7ff;
-    }
-
-    .upload-area.dragover {
-      border-color: #007aff;
-      background-color: #e8f4ff;
-    }
-
-    .upload-icon {
-      font-size: 3.5rem;
-      margin-bottom: 20px;
-      color: #007aff;
-    }
-
-    .upload-text {
-      font-size: 1.2rem;
-      color: #1d1d1f;
-      margin-bottom: 10px;
-      font-weight: 500;
-    }
-
-    .upload-hint {
-      font-size: 0.95rem;
-      color: #86868b;
-    }
-
-    .preview-image-wrapper {
-      width: 100%;
-
-      max-width: 400px;
-
-      margin: 0 auto;
-      /* 居中展示 */
-      display: none;
-    }
-
-    .upload-area.has-image .preview-image-wrapper {
-      display: block;
-    }
-
-    .upload-area.has-image .upload-content {
-      display: none;
-    }
-
-    .preview-image {
-      width: 100%;
-
-      height: auto;
-
-      object-fit: contain;
-
-      object-position: center;
-    }
-
-    input[type="file"] {
-      display: none;
-    }
-
-    .btn {
-      background-color: #007aff;
-      color: #fff;
-      border: none;
-      padding: 16px 36px;
-      border-radius: 10px;
-      font-size: 1.05rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      margin-top: 25px;
-      box-shadow: 0 4px 8px rgba(0, 122, 255, 0.2);
-    }
-
-    .btn:hover {
-      background-color: #0051d5;
-      box-shadow: 0 6px 12px rgba(0, 81, 213, 0.2);
-    }
-
-    .btn:active {
-      transform: scale(0.98);
-    }
-
-    .btn:disabled {
-      background-color: #d1d1d6;
-      cursor: not-allowed;
-      box-shadow: none;
-    }
-
-
-    .result-section {
-      display: none;
-      background-color: #fff;
-      border-radius: 16px;
-      padding: 30px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-      width: 100%;
-    }
-
-    .main-layout.has-result .result-section {
-      width: 60%;
-    }
-
-
-    .tab-container {
-      margin-bottom: 20px;
-      border-bottom: 1px solid #e5e5e7;
-    }
-
-    .tab-buttons {
-      display: flex;
-      gap: 2px;
-    }
-
-    .tab-btn {
-      padding: 12px 24px;
-      background-color: #f5f5f7;
-      border: none;
-      border-radius: 8px 8px 0 0;
-      cursor: pointer;
-      font-size: 1rem;
-      font-weight: 500;
-      transition: all 0.2s ease;
-    }
-
-    .tab-btn.active {
-      background-color: #fff;
-      color: #007aff;
-      border-bottom: 2px solid #007aff;
-    }
-
-    .tab-btn:hover:not(.active) {
-      background-color: #e8f4ff;
-    }
-
-    .tab-content {
-      display: none;
-      padding: 15px 0;
-    }
-
-    .tab-content.active {
-      display: block;
-    }
-
-    /* 提示词卡片样式 */
-    .prompt-card {
-      background-color: #f9f9fb;
-      border-radius: 12px;
-      padding: 25px;
-      margin-bottom: 20px;
-    }
-
-    .prompt-card h3 {
-      font-size: 1.3rem;
-      margin-bottom: 20px;
-      color: #1d1d1f;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .lang-badge {
-      font-size: 0.8rem;
-      padding: 6px 12px;
-      border-radius: 6px;
-      background-color: #007aff;
-      color: #fff;
-      font-weight: 500;
-    }
-
-    .prompt-field {
-      margin-bottom: 20px;
-    }
-
-    .prompt-label {
-      font-size: 1rem;
-      font-weight: 600;
-      color: #6e6e73;
-      margin-bottom: 8px;
-      display: block;
-    }
-
-    .prompt-value {
-      border: none;
-      padding: 0;
-      resize: none;
-      min-height: auto;
-      background-color: transparent;
-      cursor: default;
-    }
-
-    .prompt-value:focus {
-      outline: none;
-      border-color: #007aff;
-      box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
-    }
-
-    .field-actions {
-      display: none;
-    }
-
-    .prompt-card-content {
-      max-height: 300px;
-
-      overflow-y: auto;
-
-      padding-right: 8px;
-
-    }
-
-    .prompt-card-content::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    .prompt-card-content::-webkit-scrollbar-track {
-      background: #f1f1f1;
-      border-radius: 3px;
-    }
-
-    .prompt-card-content::-webkit-scrollbar-thumb {
-      background: #d1d1d6;
-      border-radius: 3px;
-    }
-
-    .prompt-card-content::-webkit-scrollbar-thumb:hover {
-      background: #007aff;
-    }
-
-    .copy-field-btn {
-      background-color: #34c759;
-      color: #fff;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 6px;
-      font-size: 0.85rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .copy-field-btn:hover {
-      background-color: #28a745;
-    }
-
-    .copy-field-btn.copied {
-      background-color: #86868b;
-    }
-
-    .full-prompt-box {
-      background-color: #fff;
-      border: 1px solid #e5e5e7;
-      border-radius: 10px;
-      padding: 20px;
-      margin-top: 20px;
-      position: relative;
-    }
-
-    .prompt-label.full {
-      font-size: 1rem;
-      margin-bottom: 12px;
-    }
-
-    .full-prompt-text {
-      font-size: 1rem;
-      color: #1d1d1f;
-      line-height: 1.6;
-      max-height: 400px;
-      overflow-y: auto;
-      min-height: 200px;
-      resize: vertical;
-      width: 100%;
-      border: 1px solid #e5e5e7;
-      border-radius: 8px;
-      padding: 15px;
-      font-family: inherit;
-    }
-
-    .full-prompt-text:focus {
-      outline: none;
-      border-color: #007aff;
-      box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
-    }
-
-    .copy-btn {
-      background-color: #34c759;
-      color: #fff;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 8px;
-      font-size: 0.95rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      margin-top: 15px;
-    }
-
-    .copy-btn:hover {
-      background-color: #28a745;
-    }
-
-    .copy-btn:active {
-      transform: scale(0.95);
-    }
-
-    .copy-btn.copied {
-      background-color: #86868b;
-    }
-
-    /* 加载状态 */
-    .loading {
-      display: none;
-      text-align: center;
-      padding: 40px;
-    }
-
-    .spinner {
-      border: 4px solid #e5e5e7;
-      border-top: 4px solid #007aff;
-      border-radius: 50%;
-      width: 60px;
-      height: 60px;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 20px;
-    }
-
-    @keyframes spin {
-      0% {
-        transform: rotate(0deg);
-      }
-
-      100% {
-        transform: rotate(360deg);
-      }
-    }
-
-    /* 错误提示 */
-    .error-message {
-      background-color: #ff3b30;
-      color: #fff;
-      padding: 18px 24px;
-      border-radius: 10px;
-      margin: 20px auto;
-      text-align: center;
-      display: none;
-      font-size: 1rem;
-    }
-
-    footer {
-      text-align: center;
-      padding: 30px 20px;
-      color: #86868b;
-      font-size: 0.9rem;
-      margin-top: auto;
-    }
-
-    /* 移动端适配 */
-    @media (max-width: 992px) {
-      .main-layout.has-result {
-        flex-direction: column;
-      }
-
-      .main-layout.has-result .upload-section,
-      .main-layout.has-result .result-section {
-        width: 100%;
-        max-width: 100%;
-      }
-
-      h1 {
-        font-size: 2.2rem;
-      }
-
-      .upload-section {
-        padding: 30px;
-      }
-
-      .upload-area {
-        min-height: 250px;
-      }
-    }
-
-    @media (max-width: 768px) {
-      h1 {
-        font-size: 1.8rem;
-      }
-
-      .prompt-card-content {
-        max-height: 200px;
-      }
-
-      .preview-image-wrapper {
-        max-width: 300px;
-      }
-
-      .container {
-        padding: 15px;
-      }
-
-      .upload-section {
-        padding: 20px;
-      }
-
-      .upload-area {
-        padding: 40px 15px;
-        min-height: 200px;
-      }
-
-      .result-section {
-        padding: 20px;
-      }
-
-      .prompt-card {
-        padding: 20px;
-      }
-
-      .tab-btn {
-        padding: 10px 16px;
-        font-size: 0.9rem;
-      }
-
-      .btn {
-        padding: 14px 28px;
-        font-size: 1rem;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .upload-area {
-        padding: 30px 10px;
-      }
-
-      .preview-image-wrapper {
-        max-width: 250px;
-      }
-
-      .upload-icon {
-        font-size: 2.5rem;
-      }
-
-      .upload-text {
-        font-size: 1rem;
-      }
-
-      .prompt-card {
-        padding: 15px;
-      }
-
-      .full-prompt-box {
-        padding: 15px;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
 </head>
 
 <body>
   <header>
-    <h1>绘画提示词生成器</h1>
+    <h1>PROMPTOON</h1>
     <p class="subtitle">上传二次元/动漫图片,自动反推生成 AI 绘画提示词</p>
+    <!-- 当前模型显示 -->
+    <div class="current-model-display" id="currentModelDisplay">当前模型: GEMINI (gemini-2.5-flash-lite)</div>
+    <!-- API设置按钮 -->
+    <div class="api-settings-btn" id="apiSettingsBtn">⚙️</div>
   </header>
 
   <div class="container">
@@ -570,15 +34,92 @@
         </div>
         <button class="btn" id="generateBtn" disabled>生成提示词</button>
       </div>
-
-      <!-- 加载状态 -->
       <div class="loading" id="loading">
         <div class="spinner"></div>
         <p>正在分析图片并生成提示词...</p>
       </div>
+      <!-- 消息弹窗 -->
+      <div class="message-modal" id="messageModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <span class="modal-title" id="modalTitle">提示</span>
+          </div>
+          <div class="modal-body">
+            <p id="modalMessage"></p>
+          </div>
+        </div>
+      </div>
+      <!-- API设置弹窗 -->
+      <div class="modal" id="apiSettingsModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <span class="modal-title">API设置</span>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="aiModel">AI模型:
+                <button id="manageModelsBtn" class="btn btn-secondary"
+                  style="float: right; padding: 4px 8px; font-size: 0.8rem;">管理模型</button>
+              </label>
+              <select id="aiModel" class="form-control">
+                <option value="gemini">GEMINI</option>
+                <option value="doubao">豆包</option>
+              </select>
+            </div>
 
-      <!-- 错误提示 -->
-      <div class="error-message" id="errorMessage"></div>
+            <div class="form-group">
+              <label for="modelVersion">模型版本:</label>
+              <select id="modelVersion" class="form-control">
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="apiKey">API Key:</label>
+              <input type="password" id="apiKey" class="form-control" placeholder="请输入API Key">
+            </div>
+
+            <div class="form-actions">
+              <button id="saveApiSettings" class="btn">保存</button>
+              <button id="cancelApiSettings" class="btn btn-secondary">取消</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 模型管理弹窗 -->
+      <div class="modal" id="modelManagementModal">
+        <div class="modal-content" style="max-width: 800px;">
+          <div class="modal-header">
+            <span class="modal-title">模型管理</span>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label>当前模型列表:</label>
+              <div id="modelListContainer">
+                <!-- 模型列表 -->
+              </div>
+            </div>
+            <div class="form-group">
+              <label>为选中模型添加版本:</label>
+              <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
+                <select id="modelSelector" class="form-control" style="flex: 1;">
+                  <!-- 模型选项 -->
+                </select>
+                <input type="text" id="newVersionValue" class="form-control"
+                  placeholder="版本值 (如: gemini-2.5-flash-lite)" style="flex: 1;">
+                <input type="text" id="newVersionText" class="form-control" placeholder="版本显示文本" style="flex: 1;">
+                <button id="addVersionBtn" class="model-btn">添加版本</button>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button id="resetModelsBtn" class="btn btn-secondary">恢复默认</button>
+              <button id="saveModelsBtn" class="btn">保存</button>
+              <button id="cancelModelManagement" class="btn btn-secondary">关闭</button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div class="result-section" id="resultSection">
         <div class="tab-container">
@@ -590,7 +131,6 @@
             <div class="prompt-card">
               <h3>
                 中文提示词
-
               </h3>
               <div class="prompt-card-content" id="chinesePromptDetails"></div>
               <div class="full-prompt-box">
@@ -604,7 +144,6 @@
             <div class="prompt-card">
               <h3>
                 English Prompt
-
               </h3>
               <div class="prompt-card-content" id="englishPromptDetails"></div>
               <div class="full-prompt-box">
@@ -617,6 +156,18 @@
         </div>
       </div>
     </div>
+    <!-- 确认弹窗 -->
+    <div class="modal confirm-modal" id="confirmModal">
+      <div class="confirm-modal-content">
+        <div class="confirm-modal-body">
+          <div class="confirm-modal-message" id="confirmMessage"></div>
+          <div class="confirm-modal-actions">
+            <button class="confirm-btn secondary" id="confirmCancel">取消</button>
+            <button class="confirm-btn primary" id="confirmOk">确定</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -625,7 +176,6 @@
     const generateBtn = document.getElementById('generateBtn');
     const previewImage = document.getElementById('previewImage');
     const loading = document.getElementById('loading');
-    const errorMessage = document.getElementById('errorMessage');
     const resultSection = document.getElementById('resultSection');
     const mainLayout = document.getElementById('mainLayout');
     const tabButtons = document.querySelectorAll('.tab-btn');
@@ -675,7 +225,7 @@
     // 处理文件上传
     function handleFile(file) {
       if (!file || !file.type.startsWith('image/')) {
-        showError('请选择有效的图片文件');
+        showMessage('请选择有效的图片文件 Key', '错误', 3000);
         return;
       }
 
@@ -689,8 +239,6 @@
         uploadArea.classList.add('has-image');
       };
       reader.readAsDataURL(file);
-
-      hideError();
       resultSection.style.display = 'none';
       mainLayout.classList.remove('has-result');
     }
@@ -699,14 +247,26 @@
     generateBtn.addEventListener('click', async () => {
       if (!selectedFile) return;
 
+      // 获取保存的API设置
+      const apiSettings = getSavedApiSettings();
+      if (!apiSettings) {
+        showMessage('请先设置API Key', '错误', 3000);
+        return;
+      }
+
       const formData = new FormData();
       formData.append('image', selectedFile);
+
+      // 添加API配置到请求中
+      formData.append('api_model', apiSettings.model);
+      formData.append('model_version', apiSettings.version);
+      // 解密API Key再发送
+      const decryptedApiKey = atob(apiSettings.apiKey);
+      formData.append('api_key', decryptedApiKey);
 
       loading.style.display = 'block';
       resultSection.style.display = 'none';
       generateBtn.disabled = true;
-      hideError();
-
       try {
         const response = await fetch('/generate_prompt', {
           method: 'POST',
@@ -720,10 +280,10 @@
           mainLayout.classList.add('has-result');
           displayResults(data.prompt_data);
         } else {
-          showError(data.error || '生成失败,请重试');
+          showMessage(data.error || '生成失败,请重试', '错误', 3000);
         }
       } catch (error) {
-        showError('网络错误: ' + error.message);
+        showMessage('网络错误: ' + error.message, '错误', 3000);
       } finally {
         loading.style.display = 'none';
         generateBtn.disabled = false;
@@ -734,7 +294,7 @@
     function displayResults(promptData) {
       // 如果是原始响应格式
       if (promptData.raw_response) {
-        showError('AI 返回格式异常,请重试');
+        showMessage('AI 返回格式异常,请重试', '错误', 3000);
         return;
       }
 
@@ -781,25 +341,6 @@
       }
       return html;
     }
-
-    // 复制单个字段（带前缀）
-    function copyFieldPrompt(elementId, label, button) {
-      const text = document.getElementById(elementId).value;
-      const fullText = `${label}：${text}`;
-
-      navigator.clipboard.writeText(fullText).then(() => {
-        const originalText = button.textContent;
-        button.textContent = '✓ 已复制';
-        button.classList.add('copied');
-        setTimeout(() => {
-          button.textContent = originalText;
-          button.classList.remove('copied');
-        }, 2000);
-      }).catch(err => {
-        showError('复制失败: ' + err.message);
-      });
-    }
-
     // 复制完整提示词
     function copyFullPrompt(elementId, button) {
       const text = document.getElementById(elementId).value;
@@ -813,21 +354,420 @@
           button.classList.remove('copied');
         }, 2000);
       }).catch(err => {
-        showError('复制失败: ' + err.message);
+        showMessage('复制失败: ' + err.message, '错误', 3000);
       });
     }
+    // 确认弹窗函数
+    function showConfirm(message) {
+      return new Promise((resolve) => {
+        const confirmModal = document.getElementById('confirmModal');
+        const confirmMessage = document.getElementById('confirmMessage');
+        const confirmOk = document.getElementById('confirmOk');
+        const confirmCancel = document.getElementById('confirmCancel');
 
-    // 显示错误
-    function showError(message) {
-      errorMessage.textContent = message;
-      errorMessage.style.display = 'block';
-      setTimeout(() => hideError(), 5000);
+        confirmMessage.textContent = message;
+        confirmModal.style.display = 'block';
+
+        const handleResult = (result) => {
+          confirmModal.style.display = 'none';
+          resolve(result);
+          confirmOk.removeEventListener('click', handleOk);
+          confirmCancel.removeEventListener('click', handleCancel);
+        };
+
+        const handleOk = () => handleResult(true);
+        const handleCancel = () => handleResult(false);
+
+        confirmOk.addEventListener('click', handleOk);
+        confirmCancel.addEventListener('click', handleCancel);
+      });
+    }
+    // 消息弹窗
+    function showMessage(message, title = '提示', duration = 3000) {
+      const modal = document.getElementById('messageModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalMessage = document.getElementById('modalMessage');
+
+      modalTitle.textContent = title;
+      modalMessage.textContent = message;
+
+      modal.style.display = 'block';
+
+      // 自动关闭
+      setTimeout(() => {
+        modal.style.display = 'none';
+      }, duration);
+    }
+    const apiSettingsBtn = document.getElementById('apiSettingsBtn');
+    const apiSettingsModal = document.getElementById('apiSettingsModal');
+    const cancelApiSettings = document.getElementById('cancelApiSettings');
+    const aiModelSelect = document.getElementById('aiModel');
+    const modelVersionSelect = document.getElementById('modelVersion');
+    const saveApiSettings = document.getElementById('saveApiSettings');
+
+    const modelVersions = {
+      gemini: [
+        { value: 'gemini-2.5-flash-lite', text: 'gemini-2.5-flash-lite' },
+        { value: 'gemini-3.0-pro', text: 'gemini-3.0-pro' }
+      ],
+      doubao: [
+        { value: 'Doubao-Seed-1.8', text: 'Doubao-Seed-1.8' },
+        { value: 'Doubao-Seed-1.6', text: 'Doubao-Seed-1.6' },
+        { value: 'Doubao-Seed-1.6-flash', text: 'Doubao-Seed-1.6-flash' }
+      ]
+    };
+    // 打开API
+    apiSettingsBtn.addEventListener('click', () => {
+      // 加载已保存
+      const savedSettings = getSavedApiSettings();
+      if (savedSettings) {
+        aiModelSelect.value = savedSettings.model || (currentModels.length > 0 ? currentModels[0].id : 'gemini');
+        updateModelVersions(savedSettings.model || (currentModels.length > 0 ? currentModels[0].id : 'gemini'));
+        modelVersionSelect.value = savedSettings.version || '';
+      } else {
+        const defaultModel = currentModels.length > 0 ? currentModels[0].id : 'gemini';
+        aiModelSelect.value = defaultModel;
+        updateModelVersions(defaultModel);
+      }
+      document.getElementById('apiKey').value = '';
+
+      apiSettingsModal.style.display = 'block';
+    });
+    cancelApiSettings.addEventListener('click', () => {
+      apiSettingsModal.style.display = 'none';
+    });
+
+    window.addEventListener('click', (event) => {
+      if (event.target === apiSettingsModal) {
+        apiSettingsModal.style.display = 'none';
+      }
+      if (event.target === messageModal) {
+        messageModal.style.display = 'none';
+      }
+    });
+
+    aiModelSelect.addEventListener('change', (e) => {
+      updateModelVersions(e.target.value);
+    });
+
+    function updateModelVersions(model) {
+      // 清空现有选项
+      modelVersionSelect.innerHTML = '';
+
+      // 获取当前模型的版本
+      let versions = [];
+      const modelConfig = currentModels.find(m => m.id === model);
+      if (modelConfig) {
+        versions = modelConfig.versions;
+      } else {
+        // fallback
+        versions = modelVersions[model] || [];
+      }
+
+      // 添加新选项
+      versions.forEach(version => {
+        const option = document.createElement('option');
+        option.value = version.value;
+        option.textContent = version.text;
+        modelVersionSelect.appendChild(option);
+      });
+
+      // 默认选择第一个选项
+      if (versions.length > 0) {
+        modelVersionSelect.selectedIndex = 0;
+      }
+    }
+    // 保存API设置
+    saveApiSettings.addEventListener('click', () => {
+      const model = aiModelSelect.value;
+      const version = modelVersionSelect.value;
+      const apiKey = document.getElementById('apiKey').value;
+
+      if (!model || !version) {
+        showMessage('请选择AI模型和模型版本', '错误', 3000);
+        return;
+      }
+      const settings = {
+        model: model,
+        version: version
+      };
+      if (apiKey) {
+        const encryptedApiKey = btoa(apiKey); // 简单的Base64加密，实际应用中应使用更强的加密方法
+        settings.apiKey = encryptedApiKey;
+      } else {
+        const savedSettings = getSavedApiSettings();
+        if (savedSettings && savedSettings.apiKey) {
+          settings.apiKey = savedSettings.apiKey;
+        }
+      }
+
+      localStorage.setItem('apiSettings', JSON.stringify(settings));
+      updateCurrentModelDisplay();
+      apiSettingsModal.style.display = 'none';
+      showMessage('API设置已保存', '成功', 2000);
+    });
+    function getSavedApiSettings() {
+      const settingsStr = localStorage.getItem('apiSettings');
+      if (settingsStr) {
+        try {
+          return JSON.parse(settingsStr);
+        } catch (e) {
+          console.error('解析API设置失败:', e);
+          return null;
+        }
+      }
+      return null;
     }
 
-    // 隐藏错误
-    function hideError() {
-      errorMessage.style.display = 'none';
+    // 更新当前模型显示
+    function updateCurrentModelDisplay() {
+      const savedSettings = getSavedApiSettings();
+      const currentModelDisplay = document.getElementById('currentModelDisplay');
+
+      if (savedSettings) {
+        // 找到当前模型的名称
+        const model = currentModels.find(m => m.id === savedSettings.model);
+        const modelName = model ? model.name : savedSettings.model;
+
+        // 找到当前版本的显示文本
+        let versionText = savedSettings.version;
+        if (model) {
+          const version = model.versions.find(v => v.value === savedSettings.version);
+          versionText = version ? version.text : savedSettings.version;
+        }
+
+        currentModelDisplay.textContent = `当前模型: ${modelName} (${versionText})`;
+      } else {
+        // 默认显示
+        const defaultModel = currentModels.length > 0 ? currentModels[0] : { name: 'GEMINI', id: 'gemini' };
+        const defaultVersion = defaultModel.versions && defaultModel.versions.length > 0 ?
+          defaultModel.versions[0].text : 'gemini-2.5-flash-lite';
+        currentModelDisplay.textContent = `当前模型: ${defaultModel.name} (${defaultVersion})`;
+      }
     }
+
+    // 模型管理功能
+    const manageModelsBtn = document.getElementById('manageModelsBtn');
+    const modelManagementModal = document.getElementById('modelManagementModal');
+    const cancelModelManagement = document.getElementById('cancelModelManagement');
+    const addVersionBtn = document.getElementById('addVersionBtn');
+    const saveModelsBtn = document.getElementById('saveModelsBtn');
+    const resetModelsBtn = document.getElementById('resetModelsBtn');
+    const modelListContainer = document.getElementById('modelListContainer');
+    const modelSelector = document.getElementById('modelSelector');
+
+    // 默认模型配置
+    const defaultModels = [
+      {
+        id: 'gemini',
+        name: 'GEMINI',
+        versions: [
+          { value: 'gemini-2.5-flash-lite', text: 'gemini-2.5-flash-lite' },
+          { value: 'gemini-3.0-pro', text: 'gemini-3.0-pro' }
+        ]
+      },
+      {
+        id: 'doubao',
+        name: '豆包',
+        versions: [
+          { value: 'Doubao-Seed-1.8', text: 'Doubao-Seed-1.8' },
+          { value: 'Doubao-Seed-1.6', text: 'Doubao-Seed-1.6' },
+          { value: 'Doubao-Seed-1.6-flash', text: 'Doubao-Seed-1.6-flash' }
+        ]
+      }
+    ];
+    let currentModels = [];
+    // 初始化
+    function initModels() {
+      const savedModels = localStorage.getItem('aiModels');
+      if (savedModels) {
+        try {
+          currentModels = JSON.parse(savedModels);
+        } catch (e) {
+          console.error('解析模型配置失败，使用默认配置:', e);
+          currentModels = defaultModels;
+        }
+      } else {
+        currentModels = defaultModels;
+        localStorage.setItem('aiModels', JSON.stringify(defaultModels));
+      }
+      updateModelSelectors();
+      updateCurrentModelDisplay();
+    }
+
+    // 更新模型
+    function updateModelSelectors() {
+      aiModelSelect.innerHTML = '';
+      modelSelector.innerHTML = '';
+
+      currentModels.forEach(model => {
+        // 更新主模型选择器
+        const option = document.createElement('option');
+        option.value = model.id;
+        option.textContent = model.name;
+        aiModelSelect.appendChild(option);
+
+        // 更新模型管理中的选择器
+        const selectorOption = document.createElement('option');
+        selectorOption.value = model.id;
+        selectorOption.textContent = model.name;
+        modelSelector.appendChild(selectorOption);
+      });
+
+      updateModelListDisplay();
+    }
+    function updateModelListDisplay() {
+      modelListContainer.innerHTML = '';
+
+      currentModels.forEach((model, modelIndex) => {
+        const modelDiv = document.createElement('div');
+        modelDiv.className = 'model-item';
+        modelDiv.style.border = '1px solid #ddd';
+        modelDiv.style.borderRadius = '8px';
+        modelDiv.style.padding = '15px';
+        modelDiv.style.marginBottom = '15px';
+        modelDiv.style.backgroundColor = '#f9f9fb';
+
+        modelDiv.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h4 style="margin: 0;">${model.name} (${model.id})</h4>
+          </div>
+          <div>
+            <strong>版本列表:</strong>
+            <ul id="versions-list-${modelIndex}" style="margin-top: 10px; padding-left: 20px;">
+              ${model.versions.map((version, versionIndex) => `
+                <li style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                  <span>${version.text} (${version.value})</span>
+                  <button class="remove-version-btn btn btn-secondary" data-model-index="${modelIndex}" data-version-index="${versionIndex}" style="padding: 2px 6px; font-size: 0.7rem;">删除</button>
+                </li>
+              `).join('')}
+            </ul>
+          </div>
+        `;
+
+        modelListContainer.appendChild(modelDiv);
+      });
+      bindRemoveEvents();
+    }
+    function bindRemoveEvents() {
+      document.querySelectorAll('.remove-model-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+          const modelIndex = parseInt(e.target.getAttribute('data-index'));
+          if (confirm(`确定要删除模型 "${currentModels[modelIndex].name}" 吗？`)) {
+            currentModels.splice(modelIndex, 1);
+            updateModelListDisplay();
+            updateModelSelectors();
+          }
+        });
+      });
+      document.querySelectorAll('.remove-version-btn').forEach(button => {
+        button.addEventListener('click', async (e) => {
+          const modelIndex = parseInt(e.target.getAttribute('data-model-index'));
+          const versionIndex = parseInt(e.target.getAttribute('data-version-index'));
+          const versionText = currentModels[modelIndex].versions[versionIndex].text;
+
+          const result = await showConfirm(`确定要删除版本 "${versionText}" 吗？`);
+          if (result) {
+            currentModels[modelIndex].versions.splice(versionIndex, 1);
+            updateModelListDisplay();
+          }
+        });
+      });
+    }
+    manageModelsBtn.addEventListener('click', () => {
+      apiSettingsModal.style.display = 'none';
+      modelManagementModal.style.display = 'block';
+      updateModelListDisplay();
+    });
+    cancelModelManagement.addEventListener('click', () => {
+      modelManagementModal.style.display = 'none';
+      apiSettingsModal.style.display = 'block';
+      reloadCurrentModelSettings();
+    });
+
+    window.addEventListener('click', (event) => {
+      if (event.target === modelManagementModal) {
+        modelManagementModal.style.display = 'none';
+        apiSettingsModal.style.display = 'block';
+        reloadCurrentModelSettings();
+      }
+    });
+
+    // 添加新版本
+    addVersionBtn.addEventListener('click', () => {
+      const selectedModelId = modelSelector.value;
+      const newVersionValue = document.getElementById('newVersionValue').value.trim();
+      const newVersionText = document.getElementById('newVersionText').value.trim();
+
+      if (!selectedModelId || !newVersionValue || !newVersionText) {
+        showMessage('请选择模型并填写版本信息', '错误', 3000);
+        return;
+      }
+      const model = currentModels.find(m => m.id === selectedModelId);
+      if (!model) {
+        showMessage('未找到选中的模型', '错误', 3000);
+        return;
+      }
+
+      // 检查
+      if (model.versions.some(v => v.value === newVersionValue)) {
+        showMessage('该模型下已存在相同版本值', '错误', 3000);
+        return;
+      }
+
+      // 添加新版本
+      model.versions.push({
+        value: newVersionValue,
+        text: newVersionText
+      });
+
+      document.getElementById('newVersionValue').value = '';
+      document.getElementById('newVersionText').value = '';
+      updateModelListDisplay();
+    });
+
+    saveModelsBtn.addEventListener('click', () => {
+      localStorage.setItem('aiModels', JSON.stringify(currentModels));
+      const newModelVersions = {};
+      currentModels.forEach(model => {
+        newModelVersions[model.id] = model.versions;
+      });
+      Object.assign(modelVersions, newModelVersions);
+      updateModelSelectors();
+
+      modelManagementModal.style.display = 'none';
+      apiSettingsModal.style.display = 'block';
+      updateCurrentModelDisplay();
+      reloadCurrentModelSettings();
+    });
+    resetModelsBtn.addEventListener('click', async () => {
+      const result = await showConfirm('确定要恢复默认模型配置吗？这将丢失所有自定义版本。');
+      if (result) {
+        currentModels = JSON.parse(JSON.stringify(defaultModels));
+        updateModelListDisplay();
+        updateModelSelectors();
+        updateCurrentModelDisplay();
+        showMessage('已恢复默认配置', '成功', 2000);
+      }
+    });
+    function reloadCurrentModelSettings() {
+      const savedSettings = getSavedApiSettings();
+      if (savedSettings) {
+        aiModelSelect.value = savedSettings.model || (currentModels.length > 0 ? currentModels[0].id : 'gemini');
+        updateModelVersions(savedSettings.model || (currentModels.length > 0 ? currentModels[0].id : 'gemini'));
+        modelVersionSelect.value = savedSettings.version || '';
+      } else {
+        const defaultModel = currentModels.length > 0 ? currentModels[0].id : 'gemini';
+        aiModelSelect.value = defaultModel;
+        updateModelVersions(defaultModel);
+        if (modelVersionSelect.options.length > 0) {
+          modelVersionSelect.selectedIndex = 0;
+        }
+      }
+    };
+
+    initModels();
+    updateCurrentModelDisplay();
   </script>
 </body>
 
