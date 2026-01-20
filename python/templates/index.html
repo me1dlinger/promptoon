@@ -113,7 +113,8 @@
                 </select>
                 <input type="text" id="newVersionValue" class="select-form-control"
                   placeholder="版本值 (如: gemini-2.5-flash-lite)" style="flex: 1;">
-                <input type="text" id="newVersionText" class="select-form-control" placeholder="版本显示文本" style="flex: 1;">
+                <input type="text" id="newVersionText" class="select-form-control" placeholder="版本显示文本"
+                  style="flex: 1;">
                 <button id="addVersionBtn" class="model-btn">添加版本</button>
               </div>
             </div>
@@ -359,12 +360,54 @@
       cnDetails.innerHTML = generatePromptFields(promptData.chinese_prompt, 'cn');
 
       // 显示完整提示词
-      document.getElementById('fullPromptEn').value = promptData.full_prompt_en || '';
-      document.getElementById('fullPromptCn').value = promptData.full_prompt_cn || '';
+      document.getElementById('fullPromptEn').value = generateFullPrompt(promptData.english_prompt, 'en');
+      document.getElementById('fullPromptCn').value = generateFullPrompt(promptData.chinese_prompt, 'cn');
+
 
       resultSection.style.display = 'block';
     }
+    function generateFullPrompt(promptObj, lang) {
+      const labels = {
+        'en': {
+          'style_medium': 'style_medium',
+          'style_details': 'style_details',
+          'scene': 'scene',
+          'subject': 'subject',
+          'outfit_props': 'outfit_props',
+          'background': 'background',
+          'composition': 'composition',
+          'lighting_color': 'lighting_color',
+          'special_effects': 'special_effects',
+          'technical_quality': 'technical_quality',
+          'avoid': 'avoid'
+        },
+        'cn': {
+          'style_medium': '风格与媒介',
+          'style_details': '风格细节',
+          'scene': '场景描述',
+          'subject': '主体角色',
+          'outfit_props': '服装道具',
+          'background': '背景',
+          'composition': '构图视角',
+          'lighting_color': '光照色调',
+          'special_effects': '特殊效果',
+          'technical_quality': '技术细节',
+          'avoid': '避免元素'
+        }
+      };
 
+      const langLabels = labels[lang === 'en' ? 'en' : 'cn'];
+      const header = lang === 'en' ? "Generate image:\n" : "生成图像：\n";
+      let prompt = header;
+
+      for (const [key, label] of Object.entries(langLabels)) {
+        if (promptObj[key]) {
+          prompt += `${label}: ${promptObj[key]}\n`;
+        }
+      }
+
+      return prompt;
+    }
     // 生成提示词字段（可编辑+可复制）
     function generatePromptFields(promptObj, lang) {
       const fieldLabels = {
