@@ -6,6 +6,7 @@ import os
 import uuid
 from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
+
 import requests
 from cryptography.fernet import Fernet
 from flask import Flask, jsonify, render_template, request
@@ -262,6 +263,7 @@ def call_gemini_api(
                 "prompt_data": parsed_data,
                 "raw_response": response_text,
                 "uuid": file_uuid,
+                "compressed_image": image_base64,
             }
         )
 
@@ -360,6 +362,7 @@ def call_doubao_api(
                 "response_id": response.id,
                 "model": response.model,
                 "uuid": file_uuid,
+                "compressed_image": image_base64,
             }
         )
 
@@ -426,7 +429,7 @@ def generate_prompt():
 
         image_data = file.read()
 
-        max_file_size = 10 * 1024 * 1024 
+        max_file_size = 10 * 1024 * 1024
         if len(image_data) > max_file_size:
             return (
                 jsonify({"success": False, "error": "图片文件大小不能超过 10MB"}),
@@ -459,14 +462,12 @@ def generate_prompt():
             f.write(image_data)
 
         compressed_image_data = image_data
-        max_compressed_size = 500 * 1024 
+        max_compressed_size = 500 * 1024
         if len(image_data) > max_compressed_size:
             logger.info("图片超过500KB,开始压缩...")
-            compressed_image_data = compress_image(
-                image_data, max_size_mb=0.5
-            )
+            compressed_image_data = compress_image(image_data, max_size_mb=0.5)
             if len(compressed_image_data) > max_compressed_size:
-               
+
                 compressed_image_data = compress_image(
                     compressed_image_data, max_size_mb=0.4
                 )
