@@ -21,7 +21,8 @@
     <!-- 当前模型显示 -->
     <div class="current-model-display" id="currentModelDisplay">当前模型: 无</div>
     <!-- API设置按钮 -->
-    <div class="api-settings-btn" id="apiSettingsBtn">⚙️</div>
+    <button class="header-btn records-btn" id="savedRecordsBtn">📋</button>
+    <div class="header-btn settings-btn" id="apiSettingsBtn">⚙️</div>
   </header>
 
   <div class="container">
@@ -108,13 +109,12 @@
             <div class="form-group">
               <label>为选中模型添加版本:</label>
               <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
-                <select id="modelSelector" class="select-form-control " style="flex: 1;">
+                <select id="modelSelector" class="form-control" style="flex: 1;">
                   <!-- 模型选项 -->
                 </select>
-                <input type="text" id="newVersionValue" class="select-form-control"
+                <input type="text" id="newVersionValue" class="form-control"
                   placeholder="版本值 (如: gemini-2.5-flash-lite)" style="flex: 1;">
-                <input type="text" id="newVersionText" class="select-form-control" placeholder="版本显示文本"
-                  style="flex: 1;">
+                <input type="text" id="newVersionText" class="form-control" placeholder="版本显示文本" style="flex: 1;">
                 <button id="addVersionBtn" class="model-btn">添加版本</button>
               </div>
             </div>
@@ -129,6 +129,9 @@
       </div>
 
       <div class="result-section" id="resultSection">
+        <div class="save-action-bar">
+          <button class="btn btn-save" id="saveRecordBtn">保存记录</button>
+        </div>
         <div class="tab-container">
           <div class="tab-buttons">
             <button class="tab-btn active" data-tab="cn">中文提示词</button>
@@ -175,8 +178,35 @@
         </div>
       </div>
     </div>
-  </div>
+    <div class="modal" id="savedRecordsModal">
+      <div class="modal-content"
+        style="max-width: 1000px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;">
+        <div class="modal-header">
+          <span class="modal-title">已保存记录</span>
+          <button class="close-modal-btn" id="closeSavedRecordsModal">✕</button>
+        </div>
+        <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 20px;">
+          <div id="savedRecordsList"></div>
+          <div id="emptyRecordsHint" style="text-align: center; color: #86868b; padding: 40px; display: none;">
+            暂无保存记录
+          </div>
+        </div>
+      </div>
+    </div>
 
+    <!-- 记录详情弹窗 -->
+    <div class="modal" id="recordDetailModal">
+      <div class="modal-content" style="max-width: 900px;">
+        <div class="modal-header">
+          <span class="modal-title">记录详情</span>
+          <button class="close-modal-btn" id="closeRecordDetailModal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="recordDetailContent"></div>
+        </div>
+      </div>
+    </div>
+  </div>
   <script>
     const uploadArea = document.getElementById('uploadArea');
     const fileInput = document.getElementById('fileInput');
@@ -201,12 +231,20 @@
     const aiModelSelect = document.getElementById('aiModel');
     const modelVersionSelect = document.getElementById('modelVersion');
     const saveApiSettings = document.getElementById('saveApiSettings');
+    const savedRecordsBtn = document.getElementById('savedRecordsBtn')
+    const saveRecordBtn = document.getElementById('saveRecordBtn')
+    let currentCompressedImage = null;
+    let currentPromptData = null;
+    const DB_NAME = 'PromptoonDB';
+    const DB_VERSION = 1;
+    const STORE_NAME = 'savedRecords';
 
     // 默认模型配置
     const defaultModels = [
       {
         id: 'gemini',
         name: 'GEMINI',
+        apiKey: '',
         versions: [
           { value: 'gemini-2.5-flash-lite', text: 'gemini-2.5-flash-lite' },
           { value: 'gemini-3.0-pro', text: 'gemini-3.0-pro' }
@@ -215,8 +253,9 @@
       {
         id: 'doubao',
         name: '豆包',
+        apiKey: '',
         versions: [
-          { value: 'doubao-seed-1-8', text: 'Doubao-Seed-1.8' },
+          { value: 'doubao-seed-1-8-251228', text: 'Doubao-Seed-1.8' },
           { value: 'doubao-seed-1-6-lite-251015', text: 'Doubao-Seed-1.6-Lite' },
         ]
       }
@@ -224,7 +263,177 @@
 
     let currentModels = [];
     let selectedFile = null;
+    function initIndexedDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
 
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+
+        request.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+            objectStore.createIndex('timestamp', 'timestamp', { unique: false });
+          }
+        };
+      });
+    }
+    async function saveRecordToDB(record) {
+      const db = await initIndexedDB();
+      const transaction = db.transaction([STORE_NAME], 'readwrite');
+      const objectStore = transaction.objectStore(STORE_NAME);
+
+      return new Promise((resolve, reject) => {
+        const request = objectStore.add(record);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+    async function getAllRecords() {
+      const db = await initIndexedDB();
+      const transaction = db.transaction([STORE_NAME], 'readonly');
+      const objectStore = transaction.objectStore(STORE_NAME);
+
+      return new Promise((resolve, reject) => {
+        const request = objectStore.getAll();
+        request.onsuccess = () => {
+          const records = request.result;
+          // 按时间倒序排序
+          records.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+          resolve(records);
+        };
+        request.onerror = () => reject(request.error);
+      });
+    }
+    async function deleteRecord(id) {
+      const db = await initIndexedDB();
+      const transaction = db.transaction([STORE_NAME], 'readwrite');
+      const objectStore = transaction.objectStore(STORE_NAME);
+
+      return new Promise((resolve, reject) => {
+        const request = objectStore.delete(id);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    }
+    function displaySavedRecords(records) {
+      const container = document.getElementById('savedRecordsList');
+      const emptyHint = document.getElementById('emptyRecordsHint');
+
+      if (records.length === 0) {
+        container.innerHTML = '';
+        emptyHint.style.display = 'block';
+        return;
+      }
+
+      emptyHint.style.display = 'none';
+      container.innerHTML = records.map(record => `
+    <div class="record-item" data-id="${record.id}">
+      <img src="data:image/jpeg;base64,${record.imageBase64}" alt="保存的图片" class="record-thumbnail">
+      <div class="record-info">
+        <div class="record-time">${new Date(record.timestamp).toLocaleString('zh-CN')}</div>
+        <div class="record-preview">
+          ${record.promptData.chinese_prompt?.subject?.substring(0, 50) || '无主题描述'}...
+        </div>
+      </div>
+      <div class="record-actions">
+        <button class="btn-small btn-view" onclick="viewRecordDetail(${record.id})">查看详情</button>
+        <button class="btn-small btn-delete" onclick="deleteRecordItem(${record.id})">删除</button>
+      </div>
+    </div>
+  `).join('');
+    }
+    window.viewRecordDetail = async function (id) {
+      try {
+        const records = await getAllRecords();
+        const record = records.find(r => r.id === id);
+
+        if (!record) {
+          showMessage('记录不存在', '错误', 2000);
+          return;
+        }
+        const detailContent = document.getElementById('recordDetailContent');
+        detailContent.innerHTML = `
+      <div class="detail-image-container">
+        <img src="data:image/jpeg;base64,${record.imageBase64}" alt="图片" class="detail-image">
+      </div>
+      <div class="detail-time">保存时间: ${new Date(record.timestamp).toLocaleString('zh-CN')}</div>
+      
+      <div class="detail-prompts">
+        <div class="detail-section">
+          <h4>中文提示词</h4>
+          <div class="prompt-fields-detail">
+            ${generatePromptFields(record.promptData.chinese_prompt, 'cn')}
+          </div>
+          <div class="full-prompt-box">
+            <div class="prompt-label full">完整描述</div>
+            <textarea class="full-prompt-text" id="detailFullPromptCn" readonly>${generateFullPrompt(record.promptData.chinese_prompt, 'cn')}</textarea>
+            <button class="copy-btn" onclick="copyFullPrompt('detailFullPromptCn', this)">复制</button>
+          </div>
+        </div>
+        
+        <div class="detail-section">
+          <h4>English Prompt</h4>
+          <div class="prompt-fields-detail">
+            ${generatePromptFields(record.promptData.english_prompt, 'en')}
+          </div>
+          <div class="full-prompt-box">
+            <div class="prompt-label full">完整提示词</div>
+            <textarea class="full-prompt-text" id="detailFullPromptEn" readonly>${generateFullPrompt(record.promptData.english_prompt, 'en')}</textarea>
+            <button class="copy-btn" onclick="copyFullPrompt('detailFullPromptEn', this)">复制</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+        // 显示弹窗前确保在可视区域
+        const modal = document.getElementById('recordDetailModal');
+        modal.style.display = 'block';
+
+        // 滚动到顶部
+        modal.scrollTop = 0;
+
+      } catch (error) {
+        showMessage('加载详情失败: ' + error.message, '错误', 3000);
+      }
+    };
+    // 删除记录
+    window.deleteRecordItem = async function (id) {
+      const confirmed = await showConfirm('确定要删除这条记录吗?');
+      if (!confirmed) return;
+
+      try {
+        await deleteRecord(id);
+        const records = await getAllRecords();
+        displaySavedRecords(records);
+        showMessage('删除成功', '成功', 2000);
+      } catch (error) {
+        showMessage('删除失败: ' + error.message, '错误', 3000);
+      }
+    };
+    document.getElementById('closeSavedRecordsModal').addEventListener('click', () => {
+      document.getElementById('savedRecordsModal').style.display = 'none';
+    });
+
+    document.getElementById('closeRecordDetailModal').addEventListener('click', () => {
+      document.getElementById('recordDetailModal').style.display = 'none';
+    });
+
+    window.addEventListener('click', (event) => {
+      const savedRecordsModal = document.getElementById('savedRecordsModal');
+      const recordDetailModal = document.getElementById('recordDetailModal');
+
+      if (event.target === savedRecordsModal) {
+        savedRecordsModal.style.display = 'none';
+      }
+      if (event.target === recordDetailModal) {
+        recordDetailModal.style.display = 'none';
+      }
+    });
+
+    // 初始化 IndexedDB
+    initIndexedDB().catch(err => console.error('IndexedDB初始化失败:', err));
     // Tab切换逻辑
     tabButtons.forEach(btn => {
       btn.addEventListener('click', () => {
@@ -263,23 +472,40 @@
       uploadArea.classList.remove('dragover');
       handleFile(e.dataTransfer.files[0]);
     });
+    saveRecordBtn.addEventListener('click', async () => {
+      if (!currentPromptData || !currentCompressedImage) {
+        showMessage('没有可保存的数据', '错误', 2000);
+        return;
+      }
+
+      try {
+        const record = {
+          imageBase64: currentCompressedImage,
+          promptData: currentPromptData,
+          timestamp: new Date().toISOString()
+        };
+
+        await saveRecordToDB(record);
+        showMessage('保存成功！', '成功', 2000);
+      } catch (error) {
+        showMessage('保存失败: ' + error.message, '错误', 3000);
+      }
+    });
+
+    // 查看已保存记录按钮事件
+    savedRecordsBtn.addEventListener('click', async () => {
+      try {
+        const records = await getAllRecords();
+        displaySavedRecords(records);
+        document.getElementById('savedRecordsModal').style.display = 'block';
+      } catch (error) {
+        showMessage('加载记录失败: ' + error.message, '错误', 3000);
+      }
+    });
     // 处理文件上传
     function handleFile(file) {
-      if (!file) {
+      if (!file || !file.type.startsWith('image/')) {
         showMessage('请选择有效的图片文件', '错误', 3000);
-        return;
-      }
-
-      // 严格检查文件类型，只允许 jpg, jpeg, png, webp，不允许 gif
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-      if (!allowedTypes.includes(file.type.toLowerCase())) {
-        showMessage('只支持 JPG、PNG、WebP 格式的图片文件，不支持 GIF', '错误', 3000);
-        return;
-      }
-
-      // 检查文件大小（前端初步检查，后端还会再次验证）
-      if (file.size > 10 * 1024 * 1024) { // 10MB
-        showMessage('图片文件大小不能超过 10MB', '错误', 3000);
         return;
       }
 
@@ -295,7 +521,6 @@
       reader.readAsDataURL(file);
       resultSection.style.display = 'none';
       mainLayout.classList.remove('has-result');
-      loading.style.display = 'none';
     }
 
     // 生成提示词
@@ -329,9 +554,8 @@
         const data = await response.json();
 
         if (data.success) {
-          // 切换到左右布局
           mainLayout.classList.add('has-result');
-          displayResults(data.prompt_data);
+          displayResults(data.prompt_data, data.compressed_image);
         } else {
           showMessage(data.error || '生成失败,请重试', '错误', 3000);
         }
@@ -344,28 +568,33 @@
     });
 
     // 展示生成结果
-    function displayResults(promptData) {
-      // 如果是原始响应格式
+    function displayResults(promptData, compressedImage) {
       if (promptData.raw_response) {
         showMessage('AI 返回格式异常,请重试', '错误', 3000);
         return;
       }
 
-      // 显示英文提示词详情
+      // 保存当前数据供保存功能使用
+      currentPromptData = promptData;
+      currentCompressedImage = compressedImage;
+
+      // 更新预览图片为压缩后的版本
+      if (compressedImage) {
+        previewImage.src = `data:image/jpeg;base64,${compressedImage}`;
+      }
+
       const enDetails = document.getElementById('englishPromptDetails');
       enDetails.innerHTML = generatePromptFields(promptData.english_prompt, 'en');
 
-      // 显示中文提示词详情
       const cnDetails = document.getElementById('chinesePromptDetails');
       cnDetails.innerHTML = generatePromptFields(promptData.chinese_prompt, 'cn');
 
-      // 显示完整提示词
       document.getElementById('fullPromptEn').value = generateFullPrompt(promptData.english_prompt, 'en');
       document.getElementById('fullPromptCn').value = generateFullPrompt(promptData.chinese_prompt, 'cn');
 
-
       resultSection.style.display = 'block';
     }
+
     function generateFullPrompt(promptObj, lang) {
       const labels = {
         'en': {
@@ -497,21 +726,16 @@
       }, duration);
     }
     apiSettingsBtn.addEventListener('click', () => {
-      // 加载已保存
       const savedSettings = getSavedApiSettings();
       if (savedSettings) {
-        aiModelSelect.value = savedSettings.model || (currentModels.length > 0 ? currentModels[0].id : 'gemini');
-        updateModelVersions(savedSettings.model || (currentModels.length > 0 ? currentModels[0].id : 'gemini'));
-        modelVersionSelect.value = savedSettings.version || '';
-        // 为每个模型缓存API KEY
-        if (!window.modelApiKeys) {
-          window.modelApiKeys = {};
-        }
-        if (savedSettings.apiKey) {
-          window.modelApiKeys[savedSettings.model] = savedSettings.apiKey;
-        }
-        // 显示当前模型的API KEY（如果有的话）
-        document.getElementById('apiKey').value = window.modelApiKeys[savedSettings.model] || '';
+        aiModelSelect.value = savedSettings.model;
+        updateModelVersions(savedSettings.model);
+        modelVersionSelect.value = savedSettings.version;
+
+        // 不显示实际的API Key，只显示占位符
+        const apiKeyInput = document.getElementById('apiKey');
+        apiKeyInput.value = '';
+        apiKeyInput.placeholder = '已保存加密API Key，如需修改请重新输入';
       }
 
       apiSettingsModal.style.display = 'block';
@@ -530,28 +754,25 @@
       }
     });
     aiModelSelect.addEventListener('change', (e) => {
-      // 缓存当前模型的API KEY
-      const savedSettings = getSavedApiSettings();
-      const currentModel = savedSettings ? savedSettings.model : (currentModels.length > 0 ? currentModels[0].id : 'gemini');
+      const newModel = e.target.value;
+
+      // 更新模型版本
+      updateModelVersions(newModel);
+
+      // 从aiModels中获取对应模型的API Key并显示
+      const modelConfig = currentModels.find(m => m.id === newModel);
       const apiKeyInput = document.getElementById('apiKey');
 
-      // 初始化模型API KEY缓存对象
-      if (!window.modelApiKeys) {
-        window.modelApiKeys = {};
+      if (modelConfig && modelConfig.apiKey) {
+        // 显示占位符，不显示实际Key
+        apiKeyInput.value = '';
+        apiKeyInput.placeholder = '已保存加密API Key，如需修改请重新输入';
+      } else {
+        apiKeyInput.value = '';
+        apiKeyInput.placeholder = '请输入API Key';
       }
-
-      // 缓存当前模型的API KEY
-      if (currentModel && apiKeyInput.value) {
-        window.modelApiKeys[currentModel] = apiKeyInput.value;
-      }
-
-      // 切换模型版本
-      updateModelVersions(e.target.value);
-
-      // 恢复新模型的API KEY（如果有的话）
-      const newModel = e.target.value;
-      apiKeyInput.value = window.modelApiKeys[newModel] || '';
     });
+
 
     // 更新模型版本选择器
     function updateModelVersions(modelId) {
@@ -579,35 +800,11 @@
     saveApiSettings.addEventListener('click', async () => {
       const model = aiModelSelect.value;
       const version = modelVersionSelect.value;
-      const apiKey = document.getElementById('apiKey').value;
+      const apiKeyInput = document.getElementById('apiKey').value;
 
       if (!model || !version) {
         showMessage('请选择AI模型和模型版本', '错误', 3000);
         return;
-      }
-
-      // 检查是否切换了模型但没有提供新的API KEY
-      const savedSettings = getSavedApiSettings();
-      const isModelChanged = savedSettings && savedSettings.model !== model;
-
-      // 如果切换了模型但没有提供API KEY，阻止保存
-      if (isModelChanged && !apiKey) {
-        showMessage('切换模型后请输入对应的API Key', '错误', 3000);
-        return;
-      }
-
-      // 如果没有切换模型且没有输入新的API KEY，使用原有的
-      if (!isModelChanged && !apiKey) {
-        if (savedSettings && savedSettings.apiKey) {
-          // 缓存API KEY到对应模型
-          if (!window.modelApiKeys) {
-            window.modelApiKeys = {};
-          }
-          window.modelApiKeys[model] = ''; // 清空输入框但保留原有密钥
-        } else {
-          showMessage('请输入API Key', '错误', 3000);
-          return;
-        }
       }
 
       const settings = {
@@ -615,25 +812,33 @@
         version: version
       };
 
-      if (apiKey) {
+      // 获取当前模型配置
+      const modelConfig = currentModels.find(m => m.id === model);
+      if (!modelConfig) {
+        showMessage('未找到对应的模型配置', '错误', 3000);
+        return;
+      }
+
+      let needEncrypt = false;
+
+      // 如果有输入新的API Key，需要加密
+      if (apiKeyInput) {
         try {
           const response = await fetch("/encrypt_api_key", {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ api_key: apiKey })
+            body: JSON.stringify({ api_key: apiKeyInput })
           });
 
           const data = await response.json();
 
           if (data.success) {
+            // 保存加密后的API Key到模型配置中
+            modelConfig.apiKey = data.encrypted_key;
             settings.apiKey = data.encrypted_key;
-            // 缓存新输入的API KEY
-            if (!window.modelApiKeys) {
-              window.modelApiKeys = {};
-            }
-            window.modelApiKeys[model] = apiKey;
+            needEncrypt = true;
           } else {
             showMessage('API Key加密失败: ' + data.error, '错误', 3000);
             return;
@@ -643,26 +848,40 @@
           return;
         }
       } else {
-        // 使用已保存的API KEY
-        if (savedSettings && savedSettings.apiKey) {
-          settings.apiKey = savedSettings.apiKey;
+        // 没有输入新Key，使用模型配置中已保存的加密Key
+        if (modelConfig.apiKey) {
+          settings.apiKey = modelConfig.apiKey;
         } else {
           showMessage('请输入API Key', '错误', 3000);
           return;
         }
       }
 
+      // 保存设置到localStorage
       localStorage.setItem('apiSettings', JSON.stringify(settings));
+
+      // 如果加密了新的API Key，更新模型配置
+      if (needEncrypt) {
+        localStorage.setItem('aiModels', JSON.stringify(currentModels));
+      }
+
       updateCurrentModelDisplay();
       apiSettingsModal.style.display = 'none';
       showMessage('API设置已保存', '成功', 2000);
     });
-
     function getSavedApiSettings() {
       const settingsStr = localStorage.getItem('apiSettings');
       if (settingsStr) {
         try {
-          return JSON.parse(settingsStr);
+          const settings = JSON.parse(settingsStr);
+
+          // 从aiModels中获取最新的API Key
+          const modelConfig = currentModels.find(m => m.id === settings.model);
+          if (modelConfig && modelConfig.apiKey) {
+            settings.apiKey = modelConfig.apiKey;
+          }
+
+          return settings;
         } catch (e) {
           console.error('解析API设置失败:', e);
           return null;
@@ -697,18 +916,26 @@
       if (savedModels) {
         try {
           currentModels = JSON.parse(savedModels);
+
+          // 确保每个模型都有apiKey字段
+          currentModels.forEach(model => {
+            if (!model.hasOwnProperty('apiKey')) {
+              model.apiKey = '';
+            }
+          });
         } catch (e) {
           console.error('解析模型配置失败，使用默认配置:', e);
           currentModels = JSON.parse(JSON.stringify(defaultModels));
         }
       } else {
         currentModels = JSON.parse(JSON.stringify(defaultModels));
-        localStorage.setItem('aiModels', JSON.stringify(defaultModels));
       }
+
+      // 保存更新后的模型配置
+      localStorage.setItem('aiModels', JSON.stringify(currentModels));
       updateModelSelectors();
       updateCurrentModelDisplay();
     }
-
     // 更新模型选择器
     function updateModelSelectors() {
       aiModelSelect.innerHTML = '';
@@ -881,14 +1108,10 @@
         }
       }
     };
+
     initModels();
     updateCurrentModelDisplay();
   </script>
-  <footer
-    style="text-align: center; padding: 20px; margin-top: 40px; border-top: 1px solid #eee; color: #666; font-size: 14px;">
-    <p>免责声明：本项目仅供学习交流使用，通过分析用户上传的图片生成AI绘画提示词。请勿上传包含版权保护的作品或他人创作的图像，避免可能的版权争议。</p>
-    <p>本项目不对生成的提示词内容负责，用户应自行判断和承担使用风险。如涉及第三方知识产权，请用户自行承担责任。</p>
-  </footer>
 </body>
 
 </html>
