@@ -1,34 +1,34 @@
-你是一位专业的AI绘画提示词分析专家。请分析我提供的二次元/动漫风格图片,并反推出详细的提示词。
+你是一位专业的绘画作画风格分析专家。请分析我提供的二次元/动漫风格图片,并反推出详细的提示词。
 
 请严格按照以下JSON格式输出(不要包含markdown代码块标记,直接输出纯JSON):
 
 {
-  "english_prompt": {
-    "style_medium": "描述画面的艺术风格和媒介(如: Digital anime illustration, Watercolor painting等)",
-    "style_details": "详细的绘画风格特征(如: Clean linework, cel-shading, soft color gradients等)",
-    "scene": "用一句话描述整个场景",
-    "subject": "主体角色的详细描述(发型、发色、眼睛、表情等)",
-    "outfit_props": "服装和道具的详细描述",
-    "background": "背景布局和元素描述",
-    "composition": "构图和视角(如: High-angle shot, centered composition等)",
-    "lighting_color": "光照和色调(如: Bright and airy, cool-toned palette等)",
-    "special_effects": "特殊图层或效果(如果有)",
-    "avoid": "应避免的元素(列举不应出现的特征)"
-  },
-  "chinese_prompt": {
-    "style_medium": "画面的艺术风格和媒介中文详细描述",
-    "style_details": "详细的绘画风格特征中文描述",
-    "scene": "详细描述整个场景(中文)",
-    "subject": "主体角色的详细描述(中文)",
-    "outfit_props": "服装和道具的详细描述(中文)",
-    "background": "背景布局和元素详细描述(中文)",
-    "composition": "构图和视角详细描述(中文)",
-    "lighting_color": "光照和色调详细描述(中文)",
-    "special_effects": "特殊图层或效果(中文,如果有)",
-    "avoid": "应避免的元素(中文)"
-  },
-  "full_prompt_en": "将所有英文提示词组合成一段完整的、可直接用于AI绘画的提示词(用逗号分隔各个元素)",
-  "full_prompt_cn": "将所有中文提示词组合成一段完整的描述"
+    "english_prompt": {
+        "style_medium": "Clearly specify the artistic genre and medium, focusing on anime or Japanese illustration styles, such as high-quality digital anime illustration, light novel cover art, or game CG-style artwork",
+        "style_details": "Describe line quality, rendering method, and overall aesthetic in detail, including aspects like clean and precise lineart, smooth cel-shading or soft painterly shading, balanced proportions, and polished commercial anime finish",
+        "scene": "Summarize the overall scene in one concise sentence, including setting, atmosphere, and what the character is doing",
+        "subject": "Provide a highly detailed description of the main character, including gender, age impression, hairstyle, hair color, eye shape and color, facial expression, emotional state, gaze direction, pose, and overall anime character archetype",
+        "outfit_props": "Describe clothing, accessories, and any props in detail, including style (school uniform, casual wear, fantasy costume, etc.), colors, materials, patterns, and how they fit the character",
+        "background": "Explain the background environment clearly, including indoor or outdoor setting, depth, environmental elements, decorative details, and how the background supports the anime mood without overpowering the subject",
+        "composition": "Detail the camera angle, framing, and layout, such as close-up portrait, half-body shot, full-body view, centered or rule-of-thirds composition, and whether the perspective feels dynamic or calm",
+        "lighting_color": "Describe lighting direction, intensity, and color palette",
+        "special_effects": "Mention any additional visual effects or layers, such as glow effects, floating particles, motion blur, light flares, depth of field, or subtle post-processing commonly seen in anime illustrations",
+        "avoid": "List elements that must not appear"
+    },
+    "chinese_prompt": {
+        "style_medium": "明确画面的艺术风格与媒介，强调日系二次元或动漫插画风格，例如高质量数字动漫插画、轻小说封面风格、游戏CG插画等",
+        "style_details": "详细描述画风特征，包括线条是否干净利落、是否偏赛璐璐或柔和厚涂上色、整体比例是否协调，以及商业级精致完成度",
+        "scene": "用一句话概括整体场景，说明角色所处的环境、氛围以及正在进行的动作",
+        "subject": "对主体角色进行高度细致的描述，包括性别与年龄感、发型与发色、眼睛形状与颜色、面部表情、情绪状态、视线方向、身体姿态以及角色气质或人设类型",
+        "outfit_props": "详细说明服装与道具，例如校服、日常服、幻想风服饰等，包含颜色搭配、材质质感、装饰细节以及与角色性格的契合度",
+        "background": "描述背景的空间结构与元素构成，区分室内或室外，说明景深、环境细节以及背景与角色之间的主次关系",
+        "composition": "说明构图方式与视角，例如近景特写、半身像或全身构图，是否居中构图或三分法构图，以及画面整体是静态还是具有动感",
+        "lighting_color": "描述光照来源、明暗关系与整体色调",
+        "special_effects": "描述可能存在的特殊视觉效果或图层处理，例如光晕、粒子效果、景深虚化、镜头光斑或轻微后期滤镜",
+        "avoid": "列出必须避免的元素"
+    },
+    "full_prompt_en": "将所有英文提示词组合成一段完整的、可直接用于AI绘画的提示词(用逗号分隔各个元素)",
+    "full_prompt_cn": "将所有中文提示词组合成一段完整的描述"
 }
 
 注意事项:
