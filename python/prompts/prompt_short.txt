@@ -1,4 +1,4 @@
-你是一位专业的AI绘画提示词分析专家。请分析我提供的二次元/动漫风格图片,并反推出详细的提示词。
+你是一位专业的绘画作画风格分析专家。请分析我提供的二次元/动漫风格图片,并反推出详细的提示词。
 
 请严格按照以下JSON格式输出(不要包含markdown代码块标记,直接输出纯JSON):
 
@@ -13,6 +13,7 @@
     "composition": "构图和视角(如: High-angle shot, centered composition等)",
     "lighting_color": "光照和色调(如: Bright and airy, cool-toned palette等)",
     "special_effects": "特殊图层或效果(如果有)",
+    "technical_quality": "评估技术执行水平",
     "avoid": "应避免的元素(列举不应出现的特征)"
   },
   "chinese_prompt": {
@@ -25,10 +26,9 @@
     "composition": "构图和视角中文详细描述",
     "lighting_color": "光照和色调中文详细描述",
     "special_effects": "特殊图层或效果的中文详细描述(如果有),
+    "technical_quality": "评估技术执行水平",
     "avoid": "应避免的元素(列举不应出现的特征)"
-  },
-  "full_prompt_en": "将所有英文提示词组合成一段完整的、可直接用于AI绘画的提示词(用逗号分隔各个元素)",
-  "full_prompt_cn": "将所有中文提示词组合成一段完整的描述"
+  }
 }
 
 注意事项:
@@ -36,5 +36,3 @@
 2. 仔细观察图片的每个细节,包括画风、色彩、线条质感、构图、角色特征等
 3. 英文提示词要专业、精准,适合直接用于Stable Diffusion等AI绘画工具
 4. 中文描述要准确、细致,便于理解
-5. full_prompt_en应该是一段流畅的、用逗号分隔的提示词串，需要描述应该avoid的内容
-6. full_prompt_cn应该是一段自然的中文描述，需要描述应该避免的元素

@@ -43,6 +43,12 @@
           </div>
           <input type="file" id="fileInput" accept="image/*">
         </div>
+        <div class="prompt-type-section">
+          <div class="prompt-type-buttons">
+            <button class="prompt-type-btn active" data-type="0" id="defaultPromptBtn">默认解析</button>
+            <button class="prompt-type-btn" data-type="1" id="detailedPromptBtn">详细解析</button>
+          </div>
+        </div>
         <button class="btn" id="generateBtn" disabled>生成提示词</button>
       </div>
       <!-- 消息弹窗 -->
@@ -233,6 +239,7 @@
     const saveApiSettings = document.getElementById('saveApiSettings');
     const savedRecordsBtn = document.getElementById('savedRecordsBtn')
     const saveRecordBtn = document.getElementById('saveRecordBtn')
+    let currentPromptType = 0;
     let currentCompressedImage = null;
     let currentPromptData = null;
     const DB_NAME = 'PromptoonDB';
@@ -275,6 +282,23 @@
           if (!db.objectStoreNames.contains(STORE_NAME)) {
             const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
             objectStore.createIndex('timestamp', 'timestamp', { unique: false });
+          } else {
+            // 升级现有数据库，为已有记录添加默认的 promptType
+            const transaction = event.target.transaction;
+            const objectStore = transaction.objectStore(STORE_NAME);
+            const request = objectStore.openCursor();
+
+            request.onsuccess = function () {
+              const cursor = request.result;
+              if (cursor) {
+                const record = cursor.value;
+                if (record.promptType === undefined) {
+                  record.promptType = 0;
+                  cursor.update(record);
+                }
+                cursor.continue();
+              }
+            };
           }
         };
       });
@@ -332,7 +356,12 @@
     <div class="record-item" data-id="${record.id}">
       <img src="data:image/jpeg;base64,${record.imageBase64}" alt="保存的图片" class="record-thumbnail">
       <div class="record-info">
-        <div class="record-time">${new Date(record.timestamp).toLocaleString('zh-CN')}</div>
+        <div class="record-time">
+            ${new Date(record.timestamp).toLocaleString('zh-CN')}
+            <span class="record-type-badge ${record.promptType === 0 ? 'record-type-default' : 'record-type-detailed'}">
+            ${record.promptType === 0 ? '默认解析' : '详细解析'}
+            </span>
+          </div>
         <div class="record-preview">
           ${record.promptData.chinese_prompt?.subject?.substring(0, 50) || '无主题描述'}...
         </div>
@@ -412,6 +441,65 @@
         showMessage('删除失败: ' + error.message, '错误', 3000);
       }
     };
+    document.querySelectorAll('.prompt-type-btn').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const type = parseInt(this.dataset.type);
+
+        if (type === 1) {
+          // 详细解析需要确认
+          showDetailedPromptConfirm().then(confirmed => {
+            if (confirmed) {
+              setActivePromptType(type);
+            }
+          });
+        } else {
+          setActivePromptType(type);
+        }
+      });
+    });
+    function setActivePromptType(type) {
+      // 移除所有active状态
+      document.querySelectorAll('.prompt-type-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+
+      // 设置当前active
+      document.querySelector(`.prompt-type-btn[data-type="${type}"]`).classList.add('active');
+      currentPromptType = type;
+    }
+    function showDetailedPromptConfirm() {
+      return new Promise((resolve) => {
+        const confirmModal = document.getElementById('confirmModal');
+        const confirmMessage = document.getElementById('confirmMessage');
+        const confirmOk = document.getElementById('confirmOk');
+        const confirmCancel = document.getElementById('confirmCancel');
+
+        confirmMessage.innerHTML = `
+      <div style="text-align: center;">
+        <div style="font-size: 1.1rem; margin-bottom: 10px; color: #ff9500;">⚠️ 详细解析提示</div>
+        <div style="color: #666; line-height: 1.5;">
+          详细解析会生成更丰富的提示词内容，但需要较长的处理时间并消耗更多token。<br>
+          您确定要使用详细解析吗？
+        </div>
+      </div>
+    `;
+
+        confirmModal.style.display = 'block';
+
+        const handleResult = (result) => {
+          confirmModal.style.display = 'none';
+          resolve(result);
+          confirmOk.removeEventListener('click', handleOk);
+          confirmCancel.removeEventListener('click', handleCancel);
+        };
+
+        const handleOk = () => handleResult(true);
+        const handleCancel = () => handleResult(false);
+
+        confirmOk.addEventListener('click', handleOk);
+        confirmCancel.addEventListener('click', handleCancel);
+      });
+    }
     document.getElementById('closeSavedRecordsModal').addEventListener('click', () => {
       document.getElementById('savedRecordsModal').style.display = 'none';
     });
@@ -482,6 +570,7 @@
         const record = {
           imageBase64: currentCompressedImage,
           promptData: currentPromptData,
+          promptType: currentPromptType,
           timestamp: new Date().toISOString()
         };
 
@@ -541,7 +630,7 @@
       formData.append('model_version', apiSettings.version);
       // 发送加密后的API Key
       formData.append('api_key', apiSettings.apiKey);
-
+      formData.append('prompt_type', currentPromptType);
       loading.style.display = 'flex';
       resultSection.style.display = 'none';
       generateBtn.disabled = true;

@@ -527,11 +527,14 @@ input[type="file"] {
   animation: slideIn 0.3s ease;
 }
 #recordDetailModal .modal-content {
-  max-width: 900px;
-  max-height: 90vh;
-  margin: 5% auto; 
+  max-width: 1000px;
+  max-height: 700px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
+  margin: 1% auto;
+  position: relative;
+  top: 10px; 
 }
 #recordDetailModal .modal-body {
   flex: 1;
@@ -1009,4 +1012,64 @@ footer {
     width: 100%;
     justify-content: flex-end;
   }
+}
+/* 提示词类型选择样式 */
+.prompt-type-section {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.prompt-type-section label {
+  display: block;
+  margin-bottom: 10px;
+  font-weight: 500;
+  color: #1d1d1f;
+}
+
+.prompt-type-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  justify-content: center;
+}
+
+.prompt-type-btn {
+  padding: 10px 20px;
+  border: 2px solid #007aff;
+  background-color: #fff;
+  color: #007aff;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.prompt-type-btn.active {
+  background-color: #007aff;
+  color: #fff;
+}
+
+.prompt-type-btn:hover:not(.active) {
+  background-color: #f0f7ff;
+}
+
+/* 记录类型标签 */
+.record-type-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  background-color: #007aff;
+  color: #fff;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  margin-left: 10px;
+  font-weight: 500;
+}
+
+.record-type-default {
+  background-color: #f5f5f7;
+}
+
+.record-type-detailed {
+  background-color: #617dbb;
 }

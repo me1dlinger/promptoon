@@ -62,18 +62,35 @@ UPLOAD_BASE_DIR = "./uploads"
 CONFIG_DIR = "./prompts"
 
 
-def load_prompt():
-    """从本地文件加载提示词配置"""
+def load_prompt(prompt_type=0):
+    """从本地文件加载提示词配置
+    prompt_type: 0-使用short版本, 1-使用default版本
+    """
     try:
-        with open(
-            os.path.join(CONFIG_DIR, "default_prompt.txt"), "r", encoding="utf-8"
-        ) as f:
+        if prompt_type == 1:
+            filename = "prompt_detail.txt"
+        else:
+            filename = "prompt_short.txt"
+
+        with open(os.path.join(CONFIG_DIR, filename), "r", encoding="utf-8") as f:
             prompt = f.read()
-        logger.info("✅ 成功加载提示词配置文件")
+        logger.info(f"✅ 成功加载提示词配置文件: {filename}")
         return prompt
     except FileNotFoundError as e:
         logger.error(f"❌ 提示词配置文件未找到: {e}")
-        return "默认提示词未配置"
+        # 如果指定的文件不存在，尝试加载另一个文件作为备选
+        try:
+            alt_filename = (
+                "prompt_detail.txt" if prompt_type == 0 else "prompt_short.txt"
+            )
+            with open(
+                os.path.join(CONFIG_DIR, alt_filename), "r", encoding="utf-8"
+            ) as f:
+                prompt = f.read()
+            logger.info(f"✅ 使用备选提示词文件: {alt_filename}")
+            return prompt
+        except FileNotFoundError:
+            return "默认提示词未配置"
 
 
 def load_imitation_dialogs():
@@ -153,12 +170,19 @@ def extract_token_usage(usage_metadata):
 
 
 def call_gemini_api(
-    image_base64, api_key, model_version, save_dir, unique_filename, file_uuid
+    image_base64,
+    api_key,
+    model_version,
+    save_dir,
+    unique_filename,
+    file_uuid,
+    prompt_type=0,
 ):
     """调用Gemini API生成提示词"""
     try:
+        current_prompt = load_prompt(prompt_type)
         contents = [
-            {"role": "user", "parts": [{"text": SYSTEM_PROMPT}]},
+            {"role": "user", "parts": [{"text": current_prompt}]},
             {
                 "role": "model",
                 "parts": [
@@ -273,10 +297,17 @@ def call_gemini_api(
 
 
 def call_doubao_api(
-    image_base64, api_key, model_version, save_dir, unique_filename, file_uuid
+    image_base64,
+    api_key,
+    model_version,
+    save_dir,
+    unique_filename,
+    file_uuid,
+    prompt_type=0,
 ):
     """调用豆包API生成提示词"""
     try:
+        current_prompt = load_prompt(prompt_type)
         client = Ark(
             base_url="https://ark.cn-beijing.volces.com/api/v3",
             api_key=api_key,
@@ -293,7 +324,7 @@ def call_doubao_api(
                         },
                         {
                             "type": "input_text",
-                            "text": SYSTEM_PROMPT,
+                            "text": current_prompt,
                         },
                     ],
                 }
@@ -440,7 +471,7 @@ def generate_prompt():
         api_model = request.form.get("api_model", "gemini")
         model_version = request.form.get("model_version", "gemini-2.5-flash-lite")
         encrypted_api_key = request.form.get("api_key")
-
+        prompt_type = int(request.form.get("prompt_type", 0))
         if not encrypted_api_key:
             return jsonify({"success": False, "error": "API Key不能为空"}), 400
         try:
@@ -484,6 +515,7 @@ def generate_prompt():
                 save_dir,
                 unique_filename,
                 file_uuid,
+                prompt_type,
             )
         elif api_model == "doubao":
             return call_doubao_api(
@@ -493,6 +525,7 @@ def generate_prompt():
                 save_dir,
                 unique_filename,
                 file_uuid,
+                prompt_type,
             )
         else:
             return jsonify({"success": False, "error": "不支持的AI模型"}), 400
