@@ -283,7 +283,6 @@
             const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
             objectStore.createIndex('timestamp', 'timestamp', { unique: false });
           } else {
-            // 升级现有数据库，为已有记录添加默认的 promptType
             const transaction = event.target.transaction;
             const objectStore = transaction.objectStore(STORE_NAME);
             const request = objectStore.openCursor();

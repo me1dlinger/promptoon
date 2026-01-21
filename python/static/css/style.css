@@ -185,6 +185,7 @@ h1 {
   object-fit: contain;
   object-position: center;
   border-radius: 8px;
+  margin-top: 5px;
 }
 
 input[type="file"] {
